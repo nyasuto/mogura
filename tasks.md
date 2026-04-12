@@ -20,11 +20,50 @@
 
 ## Phase 3: 出力フォーマット
 
-<!-- Phase 2 完了後に展開 -->
+### 3-A: ディレクトリツリー構造
+
+- [x] internal/analyzer/tree.go — DirNode 型の定義のみ。Name string, Size int64, Children []DirNode, FileCount int のフィールドを持つ
+- [ ] internal/analyzer/tree.go — BuildTree 関数。FileInfo スライスからルート DirNode を構築する。全階層を保持する + テスト
+- [ ] internal/analyzer/tree.go — Prune 関数。DirNode を指定 depth で刈り込み、それより深い階層のサイズは親に集約する + テスト
+
+### 3-B: テーブルフォーマッタ
+
+- [ ] internal/formatter/table.go — Row 型（[]string）と Table 型（Header + Rows）を定義。Render 関数で列幅を自動計算し、サイズ列は右寄せで整形して文字列を返す + テスト
+- [ ] main.go — Phase 1, 2 の既存テーブル出力を formatter/table.go に置き換えるリファクタリング。出力結果は変えない
+
+### 3-C: ツリーフォーマッタ
+
+- [ ] internal/formatter/tree.go — RenderTree 関数。DirNode を tree コマンド風のインデント付きテキストに変換。各行に「名前 サイズ (割合%)」を表示する + テスト
+- [ ] internal/formatter/tree.go — 割合計算の追加。各 DirNode のサイズをルートサイズに対するパーセンテージで表示。1% 未満のノードは省略する + テスト
+
+### 3-D: JSON フォーマッタ
+
+- [ ] internal/formatter/json.go — Report 型を定義。TotalSize, ScannedAt, DirTree(DirNode), Extensions(拡張子集計), Categories(カテゴリ集計), LargestFiles(Top N) を全て含む単一構造体
+- [ ] internal/formatter/json.go — RenderJSON 関数。Report を encoding/json で整形出力（indent 付き）。DirNode のネスト構造はそのまま保持する（GUI ツリーマップ用） + テスト
+
+### 3-E: CLI フラグ統合
+
+- [ ] main.go — flag パッケージで CLI フラグを追加。`--json`, `--tree`, `--depth N`(デフォルト3), `--top N`(デフォルト20)
+- [ ] main.go — フラグに応じた出力分岐。`--json` → JSON 全量出力、`--tree` → ツリー表示、フラグなし → テーブル表示（現行動作）
 
 ## Phase 4: ゴミ発見
 
-<!-- Phase 3 完了後に展開 -->
+### 4-A: 既知ディレクトリの検出
+
+- [ ] internal/analyzer/waste.go — WasteDir 型の定義。Path, Size, Kind(string) のフィールド。Kind は "node_modules", "cache", "git", "build" 等の分類ラベル
+- [ ] internal/analyzer/waste.go — 検出対象パターンのリスト定義。node_modules, .cache, __pycache__, DerivedData, .Trash, Caches(~/Library/Caches), .gradle, .cargo/registry, .npm, target(Rust) 等を map[string]string（ディレクトリ名 → Kind）で定義
+- [ ] internal/analyzer/waste.go — DetectWaste 関数。FileInfo スライスからパターンに一致するディレクトリを検出し、WasteDir のスライスを返す。サイズ降順でソート + テスト
+- [ ] internal/analyzer/waste.go — DetectLargeGitDirs 関数。.git ディレクトリのうちサイズが閾値（デフォルト 100MB）以上のものを検出 + テスト
+
+### 4-B: 古いファイルの検出
+
+- [ ] internal/analyzer/stale.go — DetectStale 関数。最終更新が N 日以上前のファイルを検出し、合計サイズとファイル数を返す。ディレクトリ別にグルーピング + テスト
+
+### 4-C: サマリレポート
+
+- [ ] internal/formatter/summary.go — サマリレポートの生成。総容量、カテゴリ内訳上位5件、キャッシュ合計サイズ、古いファイル合計サイズ、推定節約可能量をコンパクトに表示 + テスト
+- [ ] internal/formatter/json.go — Report 型に WasteDirs, StaleSummary, SavingsEstimate フィールドを追加。JSON 出力に反映
+- [ ] main.go — CLI にゴミ発見結果を統合。`--older-than N`（日数、デフォルト 365）フラグを追加。デフォルト出力にサマリセクションを追加
 
 ---
 
