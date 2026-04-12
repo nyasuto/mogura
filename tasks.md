@@ -28,7 +28,7 @@
 
 ### 3-B: テーブルフォーマッタ
 
-- [ ] internal/formatter/table.go — Row 型（[]string）と Table 型（Header + Rows）を定義。Render 関数で列幅を自動計算し、サイズ列は右寄せで整形して文字列を返す + テスト
+- [x] internal/formatter/table.go — Row 型（[]string）と Table 型（Header + Rows）を定義。Render 関数で列幅を自動計算し、サイズ列は右寄せで整形して文字列を返す + テスト
 - [ ] main.go — Phase 1, 2 の既存テーブル出力を formatter/table.go に置き換えるリファクタリング。出力結果は変えない
 
 ### 3-C: ツリーフォーマッタ

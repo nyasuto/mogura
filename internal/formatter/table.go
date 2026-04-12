@@ -4,10 +4,79 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strings"
 
 	"mogura/internal"
 	"mogura/internal/analyzer"
 )
+
+type Row []string
+
+type Table struct {
+	Header     Row
+	Rows       []Row
+	RightAlign []bool
+}
+
+func (t *Table) Render() string {
+	if len(t.Header) == 0 {
+		return ""
+	}
+
+	cols := len(t.Header)
+
+	widths := make([]int, cols)
+	for i, h := range t.Header {
+		if len(h) > widths[i] {
+			widths[i] = len(h)
+		}
+	}
+	for _, row := range t.Rows {
+		for i := 0; i < cols && i < len(row); i++ {
+			if len(row[i]) > widths[i] {
+				widths[i] = len(row[i])
+			}
+		}
+	}
+
+	var b strings.Builder
+
+	formatRow := func(row Row) {
+		for i := 0; i < cols; i++ {
+			if i > 0 {
+				b.WriteString("  ")
+			}
+			val := ""
+			if i < len(row) {
+				val = row[i]
+			}
+			if i < len(t.RightAlign) && t.RightAlign[i] {
+				b.WriteString(fmt.Sprintf("%*s", widths[i], val))
+			} else {
+				b.WriteString(fmt.Sprintf("%-*s", widths[i], val))
+			}
+		}
+		b.WriteByte('\n')
+	}
+
+	formatRow(t.Header)
+
+	totalWidth := 0
+	for i, w := range widths {
+		totalWidth += w
+		if i > 0 {
+			totalWidth += 2
+		}
+	}
+	b.WriteString(strings.Repeat("-", totalWidth))
+	b.WriteByte('\n')
+
+	for _, row := range t.Rows {
+		formatRow(row)
+	}
+
+	return b.String()
+}
 
 type DirEntry struct {
 	Path string
