@@ -45,10 +45,11 @@ func Scan(root string) ([]internal.FileInfo, error) {
 		ext := strings.ToLower(filepath.Ext(path))
 
 		files = append(files, internal.FileInfo{
-			Path: path,
-			Size: info.Size(),
-			Dir:  filepath.Dir(path),
-			Ext:  ext,
+			Path:    path,
+			Size:    info.Size(),
+			Dir:     filepath.Dir(path),
+			Ext:     ext,
+			ModTime: info.ModTime(),
 		})
 
 		return nil

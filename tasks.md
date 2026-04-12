@@ -57,7 +57,7 @@
 
 ### 4-B: 古いファイルの検出
 
-- [ ] internal/analyzer/stale.go — DetectStale 関数。最終更新が N 日以上前のファイルを検出し、合計サイズとファイル数を返す。ディレクトリ別にグルーピング + テスト
+- [x] internal/analyzer/stale.go — DetectStale 関数。最終更新が N 日以上前のファイルを検出し、合計サイズとファイル数を返す。ディレクトリ別にグルーピング + テスト
 
 ### 4-C: サマリレポート
 
