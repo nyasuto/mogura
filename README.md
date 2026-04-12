@@ -1,34 +1,33 @@
-# プロジェクト名
+# Mogura 🐹
 
-> 1〜2 行でプロジェクトを説明する。
+Mac のディスク使用量を詳細に分析する CLI ツール。
 
-## セットアップ
+macOS 標準のストレージ管理では「システム 200GB」「その他 150GB」としか分からない情報を、ディレクトリ別・拡張子別・カテゴリ別に分解して可視化する。
+
+## インストール
 
 ```bash
-# TODO: セットアップ手順を書く
+go install github.com/nyasuto/mogura@latest
 ```
 
 ## 使い方
 
 ```bash
-# TODO: 基本的な使用例を書く
+# ホームディレクトリを分析
+mogura ~
+
+# 特定ディレクトリを分析
+mogura /Users/ponpoko/Documents
 ```
 
 ## 開発
 
-このリポジトリは [Ralph Loop](docs/ralph-loop.md) による自律タスク駆動開発で進めています。
+Ralph Loop（Claude Code 自律開発ループ）で開発：
 
 ```bash
-./ralph.sh          # 自動ループ（上限 50 イテレーション）
-./ralph.sh 10       # 最大 10 イテレーション
+./ralph.sh      # 自動ループ
+./ralph.sh 10   # 最大10イテレーション
 ```
-
-詳細は以下を参照:
-
-- [docs/ralph-loop.md](docs/ralph-loop.md) — Ralph Loop の仕組みと運用
-- [docs/PRD.md](docs/PRD.md) — プロジェクト要件定義
-- [tasks.md](tasks.md) — タスク一覧
-- [CLAUDE.md](CLAUDE.md) — Claude Code 向けプロジェクト規約
 
 ## ライセンス
 
