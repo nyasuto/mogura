@@ -3,10 +3,10 @@ package internal
 import "fmt"
 
 type FileInfo struct {
-	Path string
-	Size int64
-	Dir  string
-	Ext  string
+	Path string `json:"path"`
+	Size int64  `json:"size"`
+	Dir  string `json:"dir"`
+	Ext  string `json:"ext"`
 }
 
 func FormatSize(bytes int64) string {

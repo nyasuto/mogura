@@ -9,10 +9,10 @@ import (
 )
 
 type DirNode struct {
-	Name      string
-	Size      int64
-	Children  []DirNode
-	FileCount int
+	Name      string    `json:"name"`
+	Size      int64     `json:"size"`
+	Children  []DirNode `json:"children,omitempty"`
+	FileCount int       `json:"file_count"`
 }
 
 func BuildTree(files []internal.FileInfo) DirNode {

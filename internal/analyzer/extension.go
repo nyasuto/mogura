@@ -3,8 +3,8 @@ package analyzer
 import "mogura/internal"
 
 type ExtStats struct {
-	Size  int64
-	Count int
+	Size  int64 `json:"size"`
+	Count int   `json:"count"`
 }
 
 func AggregateByExt(files []internal.FileInfo) map[string]ExtStats {
