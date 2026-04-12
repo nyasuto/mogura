@@ -97,22 +97,14 @@ func PrintDirTable(w io.Writer, dirSizes map[string]int64, limit int) {
 		entries = entries[:limit]
 	}
 
-	maxPathLen := 4 // "Path" header
+	tbl := Table{
+		Header:     Row{"Path", "Size"},
+		RightAlign: []bool{false, true},
+	}
 	for _, e := range entries {
-		if len(e.Path) > maxPathLen {
-			maxPathLen = len(e.Path)
-		}
+		tbl.Rows = append(tbl.Rows, Row{e.Path, internal.FormatSize(e.Size)})
 	}
-
-	fmt.Fprintf(w, "%-*s  %10s\n", maxPathLen, "Path", "Size")
-	for i := 0; i < maxPathLen+12; i++ {
-		fmt.Fprint(w, "-")
-	}
-	fmt.Fprintln(w)
-
-	for _, e := range entries {
-		fmt.Fprintf(w, "%-*s  %10s\n", maxPathLen, e.Path, internal.FormatSize(e.Size))
-	}
+	fmt.Fprint(w, tbl.Render())
 }
 
 type ExtEntry struct {
@@ -135,22 +127,14 @@ func PrintExtTable(w io.Writer, extStats map[string]analyzer.ExtStats, limit int
 		entries = entries[:limit]
 	}
 
-	maxExtLen := 3
+	tbl := Table{
+		Header:     Row{"Ext", "Size", "Count"},
+		RightAlign: []bool{false, true, true},
+	}
 	for _, e := range entries {
-		if len(e.Ext) > maxExtLen {
-			maxExtLen = len(e.Ext)
-		}
+		tbl.Rows = append(tbl.Rows, Row{e.Ext, internal.FormatSize(e.Size), fmt.Sprintf("%d", e.Count)})
 	}
-
-	fmt.Fprintf(w, "%-*s  %10s  %6s\n", maxExtLen, "Ext", "Size", "Count")
-	for i := 0; i < maxExtLen+20; i++ {
-		fmt.Fprint(w, "-")
-	}
-	fmt.Fprintln(w)
-
-	for _, e := range entries {
-		fmt.Fprintf(w, "%-*s  %10s  %6d\n", maxExtLen, e.Ext, internal.FormatSize(e.Size), e.Count)
-	}
+	fmt.Fprint(w, tbl.Render())
 }
 
 type CatEntry struct {
@@ -170,22 +154,19 @@ func PrintCategoryTable(w io.Writer, catStats map[analyzer.Category]analyzer.Cat
 		return entries[i].Size > entries[j].Size
 	})
 
-	maxCatLen := 8
+	tbl := Table{
+		Header:     Row{"Category", "Size", "Count", "%"},
+		RightAlign: []bool{false, true, true, true},
+	}
 	for _, e := range entries {
-		if len(string(e.Category)) > maxCatLen {
-			maxCatLen = len(string(e.Category))
-		}
+		tbl.Rows = append(tbl.Rows, Row{
+			string(e.Category),
+			internal.FormatSize(e.Size),
+			fmt.Sprintf("%d", e.Count),
+			fmt.Sprintf("%.1f%%", e.Percent),
+		})
 	}
-
-	fmt.Fprintf(w, "%-*s  %10s  %6s  %6s\n", maxCatLen, "Category", "Size", "Count", "%")
-	for i := 0; i < maxCatLen+28; i++ {
-		fmt.Fprint(w, "-")
-	}
-	fmt.Fprintln(w)
-
-	for _, e := range entries {
-		fmt.Fprintf(w, "%-*s  %10s  %6d  %5.1f%%\n", maxCatLen, string(e.Category), internal.FormatSize(e.Size), e.Count, e.Percent)
-	}
+	fmt.Fprint(w, tbl.Render())
 }
 
 func PrintTopFiles(w io.Writer, files []internal.FileInfo) {
@@ -193,20 +174,12 @@ func PrintTopFiles(w io.Writer, files []internal.FileInfo) {
 		return
 	}
 
-	maxPathLen := 4
+	tbl := Table{
+		Header:     Row{"File", "Size"},
+		RightAlign: []bool{false, true},
+	}
 	for _, f := range files {
-		if len(f.Path) > maxPathLen {
-			maxPathLen = len(f.Path)
-		}
+		tbl.Rows = append(tbl.Rows, Row{f.Path, internal.FormatSize(f.Size)})
 	}
-
-	fmt.Fprintf(w, "%-*s  %10s\n", maxPathLen, "File", "Size")
-	for i := 0; i < maxPathLen+12; i++ {
-		fmt.Fprint(w, "-")
-	}
-	fmt.Fprintln(w)
-
-	for _, f := range files {
-		fmt.Fprintf(w, "%-*s  %10s\n", maxPathLen, f.Path, internal.FormatSize(f.Size))
-	}
+	fmt.Fprint(w, tbl.Render())
 }
