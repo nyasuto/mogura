@@ -17,6 +17,7 @@ func main() {
 	treeFlag := flag.Bool("tree", false, "ツリー形式で出力")
 	depth := flag.Int("depth", 3, "ツリー表示の深さ")
 	top := flag.Int("top", 20, "巨大ファイル表示件数")
+	olderThan := flag.Int("older-than", 365, "古いファイルの判定日数")
 	flag.Usage = func() {
 		fmt.Fprintln(os.Stderr, "usage: mogura [flags] <path>")
 		flag.PrintDefaults()
@@ -41,17 +42,32 @@ func main() {
 		totalSize += f.Size
 	}
 
+	now := time.Now()
+	wasteDirs := analyzer.DetectWaste(files)
+	wasteDirs = append(wasteDirs, analyzer.DetectLargeGitDirs(files, 100*1024*1024)...)
+	staleResult := analyzer.DetectStale(files, *olderThan, now)
+	catStats := analyzer.AggregateByCategory(files)
+
+	var wasteTotal int64
+	for _, w := range wasteDirs {
+		wasteTotal += w.Size
+	}
+	savingsEstimate := wasteTotal + staleResult.TotalSize
+
 	switch {
 	case *jsonFlag:
 		tree := analyzer.BuildTree(files)
 		tree = analyzer.Prune(tree, *depth)
 		report := formatter.Report{
-			TotalSize:    totalSize,
-			ScannedAt:    time.Now(),
-			DirTree:      tree,
-			Extensions:   analyzer.AggregateByExt(files),
-			Categories:   analyzer.AggregateByCategory(files),
-			LargestFiles: analyzer.TopNFiles(files, *top),
+			TotalSize:       totalSize,
+			ScannedAt:       now,
+			DirTree:         tree,
+			Extensions:      analyzer.AggregateByExt(files),
+			Categories:      catStats,
+			LargestFiles:    analyzer.TopNFiles(files, *top),
+			WasteDirs:       wasteDirs,
+			StaleSummary:    &formatter.StaleSummary{TotalSize: staleResult.TotalSize, TotalFiles: staleResult.TotalFiles, DaysThreshold: *olderThan},
+			SavingsEstimate: savingsEstimate,
 		}
 		out, err := formatter.RenderJSON(report)
 		if err != nil {
@@ -79,12 +95,21 @@ func main() {
 
 		fmt.Println()
 		fmt.Println("=== カテゴリ別内訳 ===")
-		catStats := analyzer.AggregateByCategory(files)
 		formatter.PrintCategoryTable(os.Stdout, catStats)
 
 		fmt.Println()
 		fmt.Printf("=== 巨大ファイル Top %d ===\n", *top)
 		topFiles := analyzer.TopNFiles(files, *top)
 		formatter.PrintTopFiles(os.Stdout, topFiles)
+
+		fmt.Println()
+		fmt.Println("=== サマリ ===")
+		summary := formatter.RenderSummary(formatter.SummaryInput{
+			TotalSize:  totalSize,
+			Categories: catStats,
+			WasteDirs:  wasteDirs,
+			Stale:      staleResult,
+		})
+		fmt.Print(summary)
 	}
 }
