@@ -10,7 +10,8 @@ mkdir -p "$LOG_DIR"
 RUN_ID="$(date +%Y%m%d-%H%M%S)"
 
 for i in $(seq 1 "$MAX"); do
-  remaining=$(grep -c '^- \[ \]' "$DIR/tasks.md" 2>/dev/null || echo 0)
+  remaining=$(grep -c '^- \[ \]' "$DIR/tasks.md" 2>/dev/null || true)
+  remaining=${remaining:-0}
   if [[ "$remaining" -eq 0 ]]; then
     echo "✅ All tasks complete."
     break
