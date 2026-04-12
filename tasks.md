@@ -14,7 +14,7 @@
 
 - [x] internal/analyzer/extension.go — 拡張子別サイズ集計。拡張子ごとの合計サイズとファイル数を返す構造体を定義 + テスト
 - [x] internal/analyzer/category.go — カテゴリ分類ルール定義。拡張子 → カテゴリ（動画/画像/コード/ドキュメント/キャッシュ/アーカイブ/その他）のマッピングを map で定義
-- [ ] internal/analyzer/category.go — カテゴリ別サイズ集計。カテゴリごとの合計サイズ・ファイル数・全体に対する割合を返す + テスト
+- [x] internal/analyzer/category.go — カテゴリ別サイズ集計。カテゴリごとの合計サイズ・ファイル数・全体に対する割合を返す + テスト
 - [ ] internal/analyzer/topn.go — 巨大ファイル Top N。サイズ降順で上位 N 件の FileInfo を返す（デフォルト N=20）+ テスト
 - [ ] main.go — Phase 2 の分析結果を CLI 出力に統合。拡張子 Top10、カテゴリ内訳、巨大ファイル Top20 をセクション分けして表示
 

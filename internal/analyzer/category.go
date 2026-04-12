@@ -1,5 +1,7 @@
 package analyzer
 
+import "mogura/internal"
+
 type Category string
 
 const (
@@ -114,4 +116,30 @@ func ClassifyExt(ext string) Category {
 		return cat
 	}
 	return CategoryOther
+}
+
+type CategoryStats struct {
+	Size    int64
+	Count   int
+	Percent float64
+}
+
+func AggregateByCategory(files []internal.FileInfo) map[Category]CategoryStats {
+	result := make(map[Category]CategoryStats)
+	var totalSize int64
+	for _, f := range files {
+		totalSize += f.Size
+		cat := ClassifyExt(f.Ext)
+		s := result[cat]
+		s.Size += f.Size
+		s.Count++
+		result[cat] = s
+	}
+	if totalSize > 0 {
+		for cat, s := range result {
+			s.Percent = float64(s.Size) / float64(totalSize) * 100
+			result[cat] = s
+		}
+	}
+	return result
 }
