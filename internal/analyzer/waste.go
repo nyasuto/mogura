@@ -46,6 +46,42 @@ func findWasteMatch(dir string) (wastePath string, kind string, found bool) {
 	return
 }
 
+const DefaultGitSizeThreshold int64 = 100 * 1024 * 1024 // 100MB
+
+func DetectLargeGitDirs(files []internal.FileInfo, threshold int64) []WasteDir {
+	gitSizes := make(map[string]int64)
+
+	sep := string(filepath.Separator)
+	target := sep + ".git" + sep
+
+	for _, f := range files {
+		normalized := f.Dir + sep
+		idx := strings.Index(normalized, target)
+		if idx < 0 {
+			continue
+		}
+		gitPath := f.Dir[:idx+len(target)-1]
+		gitSizes[gitPath] += f.Size
+	}
+
+	var result []WasteDir
+	for path, size := range gitSizes {
+		if size >= threshold {
+			result = append(result, WasteDir{
+				Path: path,
+				Size: size,
+				Kind: "git",
+			})
+		}
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Size > result[j].Size
+	})
+
+	return result
+}
+
 func DetectWaste(files []internal.FileInfo) []WasteDir {
 	wasteSizes := make(map[string]int64)
 	wasteKinds := make(map[string]string)

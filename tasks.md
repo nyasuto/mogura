@@ -53,7 +53,7 @@
 - [x] internal/analyzer/waste.go — WasteDir 型の定義。Path, Size, Kind(string) のフィールド。Kind は "node_modules", "cache", "git", "build" 等の分類ラベル
 - [x] internal/analyzer/waste.go — 検出対象パターンのリスト定義。node_modules, .cache, __pycache__, DerivedData, .Trash, Caches(~/Library/Caches), .gradle, .cargo/registry, .npm, target(Rust) 等を map[string]string（ディレクトリ名 → Kind）で定義
 - [x] internal/analyzer/waste.go — DetectWaste 関数。FileInfo スライスからパターンに一致するディレクトリを検出し、WasteDir のスライスを返す。サイズ降順でソート + テスト
-- [ ] internal/analyzer/waste.go — DetectLargeGitDirs 関数。.git ディレクトリのうちサイズが閾値（デフォルト 100MB）以上のものを検出 + テスト
+- [x] internal/analyzer/waste.go — DetectLargeGitDirs 関数。.git ディレクトリのうちサイズが閾値（デフォルト 100MB）以上のものを検出 + テスト
 
 ### 4-B: 古いファイルの検出
 

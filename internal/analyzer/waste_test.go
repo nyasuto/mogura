@@ -6,6 +6,107 @@ import (
 	"mogura/internal"
 )
 
+func TestDetectLargeGitDirs(t *testing.T) {
+	const mb = 1024 * 1024
+
+	tests := []struct {
+		name      string
+		files     []internal.FileInfo
+		threshold int64
+		want      []WasteDir
+	}{
+		{
+			name:      "empty input",
+			files:     nil,
+			threshold: 100 * mb,
+			want:      nil,
+		},
+		{
+			name: "no git directories",
+			files: []internal.FileInfo{
+				{Path: "/project/src/main.go", Size: 1000, Dir: "/project/src"},
+			},
+			threshold: 100 * mb,
+			want:      nil,
+		},
+		{
+			name: "git dir below threshold",
+			files: []internal.FileInfo{
+				{Path: "/project/.git/objects/ab/1234", Size: 50 * mb, Dir: "/project/.git/objects/ab"},
+			},
+			threshold: 100 * mb,
+			want:      nil,
+		},
+		{
+			name: "git dir at threshold",
+			files: []internal.FileInfo{
+				{Path: "/project/.git/objects/ab/1234", Size: 60 * mb, Dir: "/project/.git/objects/ab"},
+				{Path: "/project/.git/objects/cd/5678", Size: 40 * mb, Dir: "/project/.git/objects/cd"},
+			},
+			threshold: 100 * mb,
+			want: []WasteDir{
+				{Path: "/project/.git", Size: 100 * mb, Kind: "git"},
+			},
+		},
+		{
+			name: "git dir above threshold",
+			files: []internal.FileInfo{
+				{Path: "/project/.git/objects/pack/pack.idx", Size: 150 * mb, Dir: "/project/.git/objects/pack"},
+			},
+			threshold: 100 * mb,
+			want: []WasteDir{
+				{Path: "/project/.git", Size: 150 * mb, Kind: "git"},
+			},
+		},
+		{
+			name: "multiple git dirs sorted by size",
+			files: []internal.FileInfo{
+				{Path: "/a/.git/objects/x", Size: 120 * mb, Dir: "/a/.git/objects"},
+				{Path: "/b/.git/objects/y", Size: 200 * mb, Dir: "/b/.git/objects"},
+				{Path: "/c/.git/objects/z", Size: 50 * mb, Dir: "/c/.git/objects"},
+			},
+			threshold: 100 * mb,
+			want: []WasteDir{
+				{Path: "/b/.git", Size: 200 * mb, Kind: "git"},
+				{Path: "/a/.git", Size: 120 * mb, Kind: "git"},
+			},
+		},
+		{
+			name: "custom threshold",
+			files: []internal.FileInfo{
+				{Path: "/project/.git/HEAD", Size: 10 * mb, Dir: "/project/.git"},
+			},
+			threshold: 5 * mb,
+			want: []WasteDir{
+				{Path: "/project/.git", Size: 10 * mb, Kind: "git"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := DetectLargeGitDirs(tt.files, tt.threshold)
+			if len(got) == 0 && len(tt.want) == 0 {
+				return
+			}
+			if len(got) != len(tt.want) {
+				t.Fatalf("got %d dirs, want %d: %v", len(got), len(tt.want), got)
+			}
+			for i, w := range tt.want {
+				if got[i].Path != w.Path {
+					t.Errorf("[%d] path: got %q, want %q", i, got[i].Path, w.Path)
+				}
+				if got[i].Size != w.Size {
+					t.Errorf("[%d] size: got %d, want %d", i, got[i].Size, w.Size)
+				}
+				if got[i].Kind != w.Kind {
+					t.Errorf("[%d] kind: got %q, want %q", i, got[i].Kind, w.Kind)
+				}
+			}
+		})
+	}
+}
+
 func TestDetectWaste(t *testing.T) {
 	tests := []struct {
 		name  string
