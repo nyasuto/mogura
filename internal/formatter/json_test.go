@@ -54,6 +54,27 @@ func TestRenderJSON(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "report with waste and stale",
+			report: Report{
+				TotalSize: 2048000,
+				ScannedAt: fixedTime,
+				DirTree:   analyzer.DirNode{Name: "root", Size: 2048000},
+				Extensions: map[string]analyzer.ExtStats{},
+				Categories: map[analyzer.Category]analyzer.CategoryStats{},
+				LargestFiles: []internal.FileInfo{},
+				WasteDirs: []analyzer.WasteDir{
+					{Path: "/root/node_modules", Size: 500000, Kind: "node_modules"},
+					{Path: "/root/.cache", Size: 300000, Kind: "cache"},
+				},
+				StaleSummary: &StaleSummary{
+					TotalSize:     200000,
+					TotalFiles:    50,
+					DaysThreshold: 365,
+				},
+				SavingsEstimate: 1000000,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -90,6 +111,28 @@ func TestRenderJSON(t *testing.T) {
 
 			if len(parsed.LargestFiles) != len(tt.report.LargestFiles) {
 				t.Errorf("LargestFiles count = %d, want %d", len(parsed.LargestFiles), len(tt.report.LargestFiles))
+			}
+
+			if len(parsed.WasteDirs) != len(tt.report.WasteDirs) {
+				t.Errorf("WasteDirs count = %d, want %d", len(parsed.WasteDirs), len(tt.report.WasteDirs))
+			}
+
+			if (parsed.StaleSummary == nil) != (tt.report.StaleSummary == nil) {
+				t.Errorf("StaleSummary nil = %v, want %v", parsed.StaleSummary == nil, tt.report.StaleSummary == nil)
+			} else if parsed.StaleSummary != nil {
+				if parsed.StaleSummary.TotalSize != tt.report.StaleSummary.TotalSize {
+					t.Errorf("StaleSummary.TotalSize = %d, want %d", parsed.StaleSummary.TotalSize, tt.report.StaleSummary.TotalSize)
+				}
+				if parsed.StaleSummary.TotalFiles != tt.report.StaleSummary.TotalFiles {
+					t.Errorf("StaleSummary.TotalFiles = %d, want %d", parsed.StaleSummary.TotalFiles, tt.report.StaleSummary.TotalFiles)
+				}
+				if parsed.StaleSummary.DaysThreshold != tt.report.StaleSummary.DaysThreshold {
+					t.Errorf("StaleSummary.DaysThreshold = %d, want %d", parsed.StaleSummary.DaysThreshold, tt.report.StaleSummary.DaysThreshold)
+				}
+			}
+
+			if parsed.SavingsEstimate != tt.report.SavingsEstimate {
+				t.Errorf("SavingsEstimate = %d, want %d", parsed.SavingsEstimate, tt.report.SavingsEstimate)
 			}
 		})
 	}
