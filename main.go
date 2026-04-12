@@ -31,6 +31,22 @@ func main() {
 
 	fmt.Printf("Total: %s (%d files)\n\n", internal.FormatSize(totalSize), len(files))
 
+	fmt.Println("=== ディレクトリ別 Top 10 ===")
 	dirSizes := analyzer.AggregateByDir(files)
 	formatter.PrintDirTable(os.Stdout, dirSizes, 10)
+
+	fmt.Println()
+	fmt.Println("=== 拡張子別 Top 10 ===")
+	extStats := analyzer.AggregateByExt(files)
+	formatter.PrintExtTable(os.Stdout, extStats, 10)
+
+	fmt.Println()
+	fmt.Println("=== カテゴリ別内訳 ===")
+	catStats := analyzer.AggregateByCategory(files)
+	formatter.PrintCategoryTable(os.Stdout, catStats)
+
+	fmt.Println()
+	fmt.Println("=== 巨大ファイル Top 20 ===")
+	topFiles := analyzer.TopNFiles(files, 20)
+	formatter.PrintTopFiles(os.Stdout, topFiles)
 }
