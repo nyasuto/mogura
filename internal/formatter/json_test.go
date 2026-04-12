@@ -42,8 +42,8 @@ func TestRenderJSON(t *testing.T) {
 					FileCount: 15,
 				},
 				Extensions: map[string]analyzer.ExtStats{
-					".go":  {Size: 512000, Count: 10},
-					".md":  {Size: 512000, Count: 5},
+					".go": {Size: 512000, Count: 10},
+					".md": {Size: 512000, Count: 5},
 				},
 				Categories: map[analyzer.Category]analyzer.CategoryStats{
 					analyzer.CategoryCode:     {Size: 512000, Count: 10, Percent: 50.0},
@@ -57,11 +57,11 @@ func TestRenderJSON(t *testing.T) {
 		{
 			name: "report with waste and stale",
 			report: Report{
-				TotalSize: 2048000,
-				ScannedAt: fixedTime,
-				DirTree:   analyzer.DirNode{Name: "root", Size: 2048000},
-				Extensions: map[string]analyzer.ExtStats{},
-				Categories: map[analyzer.Category]analyzer.CategoryStats{},
+				TotalSize:    2048000,
+				ScannedAt:    fixedTime,
+				DirTree:      analyzer.DirNode{Name: "root", Size: 2048000},
+				Extensions:   map[string]analyzer.ExtStats{},
+				Categories:   map[analyzer.Category]analyzer.CategoryStats{},
 				LargestFiles: []internal.FileInfo{},
 				WasteDirs: []analyzer.WasteDir{
 					{Path: "/root/node_modules", Size: 500000, Kind: "node_modules"},

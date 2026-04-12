@@ -142,12 +142,12 @@ func TestPrune(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		depth          int
-		wantRootKids   int
-		wantSize       int64
-		wantFileCount  int
-		wantGrandKids  int
+		name          string
+		depth         int
+		wantRootKids  int
+		wantSize      int64
+		wantFileCount int
+		wantGrandKids int
 	}{
 		{
 			name:          "depth 0 removes all children",
@@ -165,12 +165,12 @@ func TestPrune(t *testing.T) {
 			wantGrandKids: 0,
 		},
 		{
-			name:           "depth 2 keeps grandchildren",
-			depth:          2,
-			wantRootKids:   2,
-			wantSize:       1000,
-			wantFileCount:  10,
-			wantGrandKids:  2,
+			name:          "depth 2 keeps grandchildren",
+			depth:         2,
+			wantRootKids:  2,
+			wantSize:      1000,
+			wantFileCount: 10,
+			wantGrandKids: 2,
 		},
 		{
 			name:          "depth exceeding tree depth returns full tree",

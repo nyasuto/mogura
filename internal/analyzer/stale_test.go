@@ -13,13 +13,13 @@ func TestDetectStale(t *testing.T) {
 	recent := now.AddDate(0, -1, 0)
 
 	tests := []struct {
-		name       string
-		files      []internal.FileInfo
-		days       int
-		wantTotal  int64
-		wantFiles  int
-		wantDirs   int
-		wantFirst  StaleDirSummary
+		name      string
+		files     []internal.FileInfo
+		days      int
+		wantTotal int64
+		wantFiles int
+		wantDirs  int
+		wantFirst StaleDirSummary
 	}{
 		{
 			name:      "empty input",
