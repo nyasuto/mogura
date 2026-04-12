@@ -1,33 +1,39 @@
 # Mogura — Mac ディスク使用量アナライザ
 
-> 指定ディレクトリ以下をスキャンし、ディレクトリ別・拡張子別・カテゴリ別のサイズ集計と不要ファイル検出を行う CLI ツール
+> 指定ディレクトリ以下をスキャンし、ディレクトリ別のサイズ集計を行う CLI ツール
 
 ## アーキテクチャ
 
 ```
-CLI (flags) → Scanner (walk) → Analyzer (集計) → Formatter (出力)
+CLI (args) → Scanner (walk) → Analyzer (集計) → Formatter (出力)
 ```
 
 ## ディレクトリ構成
 
 ```
-mogura/
-├── main.go
+.
+├── main.go                          # エントリポイント: 引数パス → scan → 集計 → 表示
+├── Makefile                         # build / test / vet / fmt / quality / clean / install
+├── go.mod                           # module mogura, Go 1.26.2
 └── internal/
-    ├── types.go         # FileInfo 型、FormatSize
+    ├── types.go                     # FileInfo 型、FormatSize（human-readable 変換）
+    ├── types_test.go
     ├── scanner/
-    │   └── scanner.go   # ディレクトリ再帰走査
+    │   ├── scanner.go               # ディレクトリ再帰走査（symlink スキップ、permission 警告続行）
+    │   └── scanner_test.go
     ├── analyzer/
-    │   └── directory.go # ディレクトリ別集計
+    │   ├── directory.go             # ディレクトリ別サイズ集計（map[string]int64）
+    │   └── directory_test.go
     └── formatter/
-        └── table.go     # テーブル出力
+        └── table.go                 # サイズ降順ソート → 上位 N 件テーブル出力
 ```
 
 ## ビルド・テストコマンド
 
 ```bash
-go build ./...
-go test ./...
+make build     # go build -o mogura .
+make test      # go test ./...
+make quality   # vet + fmt + test
 go vet ./...
 ```
 

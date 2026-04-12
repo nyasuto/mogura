@@ -8,7 +8,7 @@
 - [x] internal/analyzer/directory.go — ディレクトリ別サイズ集計。map[string]int64 を返す + テスト
 - [x] main.go — CLI エントリポイント。引数でパスを受け取り、合計サイズとディレクトリ上位10件をテーブル表示
 - [x] makefileのような開発エコシステムを作る
-- [ ] Readme, CLAUDE.md を最新コードベースを元に更新
+- [x] Readme, CLAUDE.md を最新コードベースを元に更新
 ## Phase 2: 分析機能
 
 <!-- Phase 1 完了後に展開 -->
