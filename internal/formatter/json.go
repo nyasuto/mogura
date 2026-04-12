@@ -1,6 +1,7 @@
 package formatter
 
 import (
+	"encoding/json"
 	"time"
 
 	"mogura/internal"
@@ -14,4 +15,12 @@ type Report struct {
 	Extensions   map[string]analyzer.ExtStats           `json:"extensions"`
 	Categories   map[analyzer.Category]analyzer.CategoryStats `json:"categories"`
 	LargestFiles []internal.FileInfo                    `json:"largest_files"`
+}
+
+func RenderJSON(r Report) (string, error) {
+	b, err := json.MarshalIndent(r, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }

@@ -39,7 +39,7 @@
 ### 3-D: JSON フォーマッタ
 
 - [x] internal/formatter/json.go — Report 型を定義。TotalSize, ScannedAt, DirTree(DirNode), Extensions(拡張子集計), Categories(カテゴリ集計), LargestFiles(Top N) を全て含む単一構造体
-- [ ] internal/formatter/json.go — RenderJSON 関数。Report を encoding/json で整形出力（indent 付き）。DirNode のネスト構造はそのまま保持する（GUI ツリーマップ用） + テスト
+- [x] internal/formatter/json.go — RenderJSON 関数。Report を encoding/json で整形出力（indent 付き）。DirNode のネスト構造はそのまま保持する（GUI ツリーマップ用） + テスト
 
 ### 3-E: CLI フラグ統合
 
