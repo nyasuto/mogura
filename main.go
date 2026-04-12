@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"mogura/internal"
 	"mogura/internal/analyzer"
@@ -40,28 +41,50 @@ func main() {
 		totalSize += f.Size
 	}
 
-	fmt.Printf("Total: %s (%d files)\n\n", internal.FormatSize(totalSize), len(files))
+	switch {
+	case *jsonFlag:
+		tree := analyzer.BuildTree(files)
+		tree = analyzer.Prune(tree, *depth)
+		report := formatter.Report{
+			TotalSize:    totalSize,
+			ScannedAt:    time.Now(),
+			DirTree:      tree,
+			Extensions:   analyzer.AggregateByExt(files),
+			Categories:   analyzer.AggregateByCategory(files),
+			LargestFiles: analyzer.TopNFiles(files, *top),
+		}
+		out, err := formatter.RenderJSON(report)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println(out)
 
-	fmt.Println("=== ディレクトリ別 Top 10 ===")
-	dirSizes := analyzer.AggregateByDir(files)
-	formatter.PrintDirTable(os.Stdout, dirSizes, 10)
+	case *treeFlag:
+		tree := analyzer.BuildTree(files)
+		tree = analyzer.Prune(tree, *depth)
+		fmt.Print(formatter.RenderTree(tree))
 
-	fmt.Println()
-	fmt.Println("=== 拡張子別 Top 10 ===")
-	extStats := analyzer.AggregateByExt(files)
-	formatter.PrintExtTable(os.Stdout, extStats, 10)
+	default:
+		fmt.Printf("Total: %s (%d files)\n\n", internal.FormatSize(totalSize), len(files))
 
-	fmt.Println()
-	fmt.Println("=== カテゴリ別内訳 ===")
-	catStats := analyzer.AggregateByCategory(files)
-	formatter.PrintCategoryTable(os.Stdout, catStats)
+		fmt.Println("=== ディレクトリ別 Top 10 ===")
+		dirSizes := analyzer.AggregateByDir(files)
+		formatter.PrintDirTable(os.Stdout, dirSizes, 10)
 
-	fmt.Println()
-	fmt.Printf("=== 巨大ファイル Top %d ===\n", *top)
-	topFiles := analyzer.TopNFiles(files, *top)
-	formatter.PrintTopFiles(os.Stdout, topFiles)
+		fmt.Println()
+		fmt.Println("=== 拡張子別 Top 10 ===")
+		extStats := analyzer.AggregateByExt(files)
+		formatter.PrintExtTable(os.Stdout, extStats, 10)
 
-	_ = jsonFlag
-	_ = treeFlag
-	_ = depth
+		fmt.Println()
+		fmt.Println("=== カテゴリ別内訳 ===")
+		catStats := analyzer.AggregateByCategory(files)
+		formatter.PrintCategoryTable(os.Stdout, catStats)
+
+		fmt.Println()
+		fmt.Printf("=== 巨大ファイル Top %d ===\n", *top)
+		topFiles := analyzer.TopNFiles(files, *top)
+		formatter.PrintTopFiles(os.Stdout, topFiles)
+	}
 }
