@@ -61,7 +61,7 @@
 
 ### 4-C: サマリレポート
 
-- [ ] internal/formatter/summary.go — サマリレポートの生成。総容量、カテゴリ内訳上位5件、キャッシュ合計サイズ、古いファイル合計サイズ、推定節約可能量をコンパクトに表示 + テスト
+- [x] internal/formatter/summary.go — サマリレポートの生成。総容量、カテゴリ内訳上位5件、キャッシュ合計サイズ、古いファイル合計サイズ、推定節約可能量をコンパクトに表示 + テスト
 - [ ] internal/formatter/json.go — Report 型に WasteDirs, StaleSummary, SavingsEstimate フィールドを追加。JSON 出力に反映
 - [ ] main.go — CLI にゴミ発見結果を統合。`--older-than N`（日数、デフォルト 365）フラグを追加。デフォルト出力にサマリセクションを追加
 
