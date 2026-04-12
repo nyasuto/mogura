@@ -86,6 +86,25 @@ func BuildTree(files []internal.FileInfo) DirNode {
 	return build(root)
 }
 
+func Prune(node DirNode, depth int) DirNode {
+	if depth <= 0 {
+		return DirNode{
+			Name:      node.Name,
+			Size:      node.Size,
+			FileCount: node.FileCount,
+		}
+	}
+	pruned := DirNode{
+		Name:      node.Name,
+		Size:      node.Size,
+		FileCount: node.FileCount,
+	}
+	for _, child := range node.Children {
+		pruned.Children = append(pruned.Children, Prune(child, depth-1))
+	}
+	return pruned
+}
+
 func commonRoot(files []internal.FileInfo) string {
 	root := files[0].Dir
 	for _, f := range files[1:] {

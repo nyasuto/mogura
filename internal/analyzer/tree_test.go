@@ -121,6 +121,109 @@ func TestBuildTreeChildrenSortedBySize(t *testing.T) {
 	}
 }
 
+func TestPrune(t *testing.T) {
+	tree := DirNode{
+		Name: "/root", Size: 1000, FileCount: 10,
+		Children: []DirNode{
+			{
+				Name: "a", Size: 600, FileCount: 6,
+				Children: []DirNode{
+					{
+						Name: "deep", Size: 400, FileCount: 4,
+						Children: []DirNode{
+							{Name: "deeper", Size: 200, FileCount: 2},
+						},
+					},
+					{Name: "leaf", Size: 200, FileCount: 2},
+				},
+			},
+			{Name: "b", Size: 400, FileCount: 4},
+		},
+	}
+
+	tests := []struct {
+		name           string
+		depth          int
+		wantRootKids   int
+		wantSize       int64
+		wantFileCount  int
+		wantGrandKids  int
+	}{
+		{
+			name:          "depth 0 removes all children",
+			depth:         0,
+			wantRootKids:  0,
+			wantSize:      1000,
+			wantFileCount: 10,
+		},
+		{
+			name:          "depth 1 keeps direct children only",
+			depth:         1,
+			wantRootKids:  2,
+			wantSize:      1000,
+			wantFileCount: 10,
+			wantGrandKids: 0,
+		},
+		{
+			name:           "depth 2 keeps grandchildren",
+			depth:          2,
+			wantRootKids:   2,
+			wantSize:       1000,
+			wantFileCount:  10,
+			wantGrandKids:  2,
+		},
+		{
+			name:          "depth exceeding tree depth returns full tree",
+			depth:         100,
+			wantRootKids:  2,
+			wantSize:      1000,
+			wantFileCount: 10,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := Prune(tree, tt.depth)
+			if got.Size != tt.wantSize {
+				t.Errorf("Size = %d, want %d", got.Size, tt.wantSize)
+			}
+			if got.FileCount != tt.wantFileCount {
+				t.Errorf("FileCount = %d, want %d", got.FileCount, tt.wantFileCount)
+			}
+			if len(got.Children) != tt.wantRootKids {
+				t.Errorf("Children count = %d, want %d", len(got.Children), tt.wantRootKids)
+			}
+			if tt.wantGrandKids > 0 && len(got.Children) > 0 {
+				grandKids := 0
+				for _, c := range got.Children {
+					grandKids += len(c.Children)
+				}
+				if grandKids != tt.wantGrandKids {
+					t.Errorf("Grandchildren count = %d, want %d", grandKids, tt.wantGrandKids)
+				}
+			}
+		})
+	}
+}
+
+func TestPrunePreservesOriginal(t *testing.T) {
+	tree := DirNode{
+		Name: "/root", Size: 100, FileCount: 2,
+		Children: []DirNode{
+			{Name: "a", Size: 60, FileCount: 1},
+			{Name: "b", Size: 40, FileCount: 1},
+		},
+	}
+
+	pruned := Prune(tree, 0)
+	if len(pruned.Children) != 0 {
+		t.Errorf("pruned should have no children, got %d", len(pruned.Children))
+	}
+	if len(tree.Children) != 2 {
+		t.Errorf("original tree should still have 2 children, got %d", len(tree.Children))
+	}
+}
+
 func TestBuildTreeSizeAggregation(t *testing.T) {
 	files := []internal.FileInfo{
 		{Path: "/a/x.txt", Size: 100, Dir: "/a"},
