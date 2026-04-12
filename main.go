@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -11,12 +12,22 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: mogura <path>")
+	jsonFlag := flag.Bool("json", false, "JSON 形式で出力")
+	treeFlag := flag.Bool("tree", false, "ツリー形式で出力")
+	depth := flag.Int("depth", 3, "ツリー表示の深さ")
+	top := flag.Int("top", 20, "巨大ファイル表示件数")
+	flag.Usage = func() {
+		fmt.Fprintln(os.Stderr, "usage: mogura [flags] <path>")
+		flag.PrintDefaults()
+	}
+	flag.Parse()
+
+	if flag.NArg() < 1 {
+		flag.Usage()
 		os.Exit(1)
 	}
 
-	root := os.Args[1]
+	root := flag.Arg(0)
 
 	files, err := scanner.Scan(root)
 	if err != nil {
@@ -46,7 +57,11 @@ func main() {
 	formatter.PrintCategoryTable(os.Stdout, catStats)
 
 	fmt.Println()
-	fmt.Println("=== 巨大ファイル Top 20 ===")
-	topFiles := analyzer.TopNFiles(files, 20)
+	fmt.Printf("=== 巨大ファイル Top %d ===\n", *top)
+	topFiles := analyzer.TopNFiles(files, *top)
 	formatter.PrintTopFiles(os.Stdout, topFiles)
+
+	_ = jsonFlag
+	_ = treeFlag
+	_ = depth
 }
