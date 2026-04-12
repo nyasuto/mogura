@@ -23,7 +23,7 @@
 ### 3-A: ディレクトリツリー構造
 
 - [x] internal/analyzer/tree.go — DirNode 型の定義のみ。Name string, Size int64, Children []DirNode, FileCount int のフィールドを持つ
-- [ ] internal/analyzer/tree.go — BuildTree 関数。FileInfo スライスからルート DirNode を構築する。全階層を保持する + テスト
+- [x] internal/analyzer/tree.go — BuildTree 関数。FileInfo スライスからルート DirNode を構築する。全階層を保持する + テスト
 - [ ] internal/analyzer/tree.go — Prune 関数。DirNode を指定 depth で刈り込み、それより深い階層のサイズは親に集約する + テスト
 
 ### 3-B: テーブルフォーマッタ
