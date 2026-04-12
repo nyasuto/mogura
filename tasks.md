@@ -34,7 +34,7 @@
 ### 3-C: ツリーフォーマッタ
 
 - [x] internal/formatter/tree.go — RenderTree 関数。DirNode を tree コマンド風のインデント付きテキストに変換。各行に「名前 サイズ (割合%)」を表示する + テスト
-- [ ] internal/formatter/tree.go — 割合計算の追加。各 DirNode のサイズをルートサイズに対するパーセンテージで表示。1% 未満のノードは省略する + テスト
+- [x] internal/formatter/tree.go — 割合計算の追加。各 DirNode のサイズをルートサイズに対するパーセンテージで表示。1% 未満のノードは省略する + テスト
 
 ### 3-D: JSON フォーマッタ
 

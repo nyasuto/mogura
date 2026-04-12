@@ -84,6 +84,107 @@ func TestRenderTree(t *testing.T) {
 	}
 }
 
+func TestRenderTreeOmitsSmallNodes(t *testing.T) {
+	tests := []struct {
+		name       string
+		node       analyzer.DirNode
+		contains   []string
+		notContain []string
+	}{
+		{
+			name: "omit children below 1 percent",
+			node: analyzer.DirNode{
+				Name: "root",
+				Size: 10000,
+				Children: []analyzer.DirNode{
+					{Name: "big", Size: 9000},
+					{Name: "medium", Size: 900},
+					{Name: "tiny", Size: 99},
+					{Name: "micro", Size: 1},
+				},
+			},
+			contains: []string{
+				"root 9.8 KB (100.0%)",
+				"big 8.8 KB (90.0%)",
+				"medium 900 B (9.0%)",
+			},
+			notContain: []string{
+				"tiny",
+				"micro",
+			},
+		},
+		{
+			name: "exactly 1 percent is shown",
+			node: analyzer.DirNode{
+				Name: "root",
+				Size: 10000,
+				Children: []analyzer.DirNode{
+					{Name: "big", Size: 9900},
+					{Name: "borderline", Size: 100},
+				},
+			},
+			contains: []string{
+				"big",
+				"borderline",
+			},
+			notContain: []string{},
+		},
+		{
+			name: "nested small nodes omitted",
+			node: analyzer.DirNode{
+				Name: "root",
+				Size: 10000,
+				Children: []analyzer.DirNode{
+					{
+						Name: "dir",
+						Size: 10000,
+						Children: []analyzer.DirNode{
+							{Name: "large", Size: 9950},
+							{Name: "small", Size: 50},
+						},
+					},
+				},
+			},
+			contains:   []string{"large"},
+			notContain: []string{"small"},
+		},
+		{
+			name: "last connector adjusts after filtering",
+			node: analyzer.DirNode{
+				Name: "root",
+				Size: 10000,
+				Children: []analyzer.DirNode{
+					{Name: "big", Size: 9900},
+					{Name: "tiny", Size: 50},
+					{Name: "also_tiny", Size: 50},
+				},
+			},
+			contains: []string{
+				"└── big",
+			},
+			notContain: []string{
+				"├── big",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := RenderTree(tt.node)
+			for _, want := range tt.contains {
+				if !strings.Contains(got, want) {
+					t.Errorf("RenderTree() missing expected %q\ngot:\n%s", want, got)
+				}
+			}
+			for _, notWant := range tt.notContain {
+				if strings.Contains(got, notWant) {
+					t.Errorf("RenderTree() should not contain %q\ngot:\n%s", notWant, got)
+				}
+			}
+		})
+	}
+}
+
 func TestRenderTreeStructure(t *testing.T) {
 	node := analyzer.DirNode{
 		Name: "root",

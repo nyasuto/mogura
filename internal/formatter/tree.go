@@ -17,8 +17,9 @@ func RenderTree(node analyzer.DirNode) string {
 }
 
 func renderChildren(b *strings.Builder, children []analyzer.DirNode, prefix string, rootSize int64) {
-	for i, child := range children {
-		isLast := i == len(children)-1
+	visible := filterVisible(children, rootSize)
+	for i, child := range visible {
+		isLast := i == len(visible)-1
 
 		connector := "├── "
 		if isLast {
@@ -40,4 +41,18 @@ func renderChildren(b *strings.Builder, children []analyzer.DirNode, prefix stri
 			renderChildren(b, child.Children, childPrefix, rootSize)
 		}
 	}
+}
+
+func filterVisible(children []analyzer.DirNode, rootSize int64) []analyzer.DirNode {
+	if rootSize <= 0 {
+		return children
+	}
+	var result []analyzer.DirNode
+	for _, child := range children {
+		percent := float64(child.Size) / float64(rootSize) * 100
+		if percent >= 1.0 {
+			result = append(result, child)
+		}
+	}
+	return result
 }
