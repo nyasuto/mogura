@@ -43,6 +43,17 @@
         .cat-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
         .cat-bar-text { position: absolute; right: 6px; top: 0; line-height: 18px; font-size: 10px; color: #ccc; }
         .cat-size { width: 70px; text-align: right; color: #ccc; font-size: 11px; flex-shrink: 0; }
+        .largest-files { margin-top: 8px; }
+        .largest-files h2 { font-size: 1rem; color: #e94560; margin-bottom: 12px; }
+        .largest-files table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .largest-files th { text-align: left; padding: 8px 12px; border-bottom: 2px solid #0f3460; color: #888; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+        .largest-files th.col-size { text-align: right; }
+        .largest-files td { padding: 8px 12px; border-bottom: 1px solid #0f3460; }
+        .largest-files tr:hover td { background: rgba(74,144,217,0.08); }
+        .largest-files .col-rank { width: 40px; color: #888; }
+        .largest-files .col-path { word-break: break-all; color: #e0e0e0; }
+        .largest-files .col-ext { width: 80px; color: #aaa; }
+        .largest-files .col-size { width: 100px; text-align: right; font-weight: 500; color: #fff; }
     </style>
 </head>
 <body>
@@ -55,6 +66,7 @@
         <div class="legend" id="legend"></div>
         <div class="breadcrumb" id="breadcrumb"></div>
         <div id="treemap"></div>
+        <div class="largest-files" id="largest-files"></div>
     </div>
     <script>
         const data = {{.DataJSON}};
@@ -315,6 +327,49 @@
 
         var tree = data.dir_tree;
         renderTreemap(tree);
+
+        (function() {
+            var files = (data.largest_files || []).slice(0, 10);
+            if (files.length === 0) return;
+            var panel = document.getElementById("largest-files");
+            var h2 = document.createElement("h2");
+            h2.textContent = "巨大ファイル Top " + files.length;
+            panel.appendChild(h2);
+            var table = document.createElement("table");
+            var thead = document.createElement("thead");
+            var hr = document.createElement("tr");
+            ["#", "パス", "拡張子", "サイズ"].forEach(function(t, i) {
+                var th = document.createElement("th");
+                th.textContent = t;
+                if (i === 3) th.className = "col-size";
+                hr.appendChild(th);
+            });
+            thead.appendChild(hr);
+            table.appendChild(thead);
+            var tbody = document.createElement("tbody");
+            files.forEach(function(f, i) {
+                var tr = document.createElement("tr");
+                var tdRank = document.createElement("td");
+                tdRank.className = "col-rank";
+                tdRank.textContent = i + 1;
+                tr.appendChild(tdRank);
+                var tdPath = document.createElement("td");
+                tdPath.className = "col-path";
+                tdPath.textContent = f.path;
+                tr.appendChild(tdPath);
+                var tdExt = document.createElement("td");
+                tdExt.className = "col-ext";
+                tdExt.textContent = f.ext || "-";
+                tr.appendChild(tdExt);
+                var tdSize = document.createElement("td");
+                tdSize.className = "col-size";
+                tdSize.textContent = formatSize(f.size);
+                tr.appendChild(tdSize);
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            panel.appendChild(table);
+        })();
     </script>
 </body>
 </html>
