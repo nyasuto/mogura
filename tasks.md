@@ -217,7 +217,7 @@
 - [x] internal/scanner/parallel_test.go — 並列版でも既存 scanner_test.go のテスト（exclude、symlink、permission、OneFileSystem、PhysicalSize 等）が全てパスすること。map 順非依存の検証を追加
 - [x] internal/scanner/parallel_test.go — 並列性テスト: 数千ファイルを含む一時ツリーを作り、Workers=1 と Workers=8 で同一結果になることを確認
 - [x] bench_test.go（プロジェクトルート or scanner 配下）— 大規模ディレクトリ用のベンチマーク。`go test -bench` で逐次版 vs 並列版のスループットを測れるようにする。CI では走らせず手動実行でよい
-- [ ] 実機ベンチ: `./mogura ~` を 3 回実行し、逐次版との差を README に記録（ミニマムな数値報告でよい）
+- [x] 実機ベンチ: `./mogura ~` を 3 回実行し、逐次版との差を README に記録（ミニマムな数値報告でよい）
 - [ ] README.md に並列スキャンの説明と `-workers` フラグ（internal/app/app.go 側も併せて追加）を追記
 
 ### 10-B: getattrlistbulk（darwin 専用の一括 stat）
