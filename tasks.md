@@ -71,7 +71,7 @@
 ### 5-A: main.go のオーケストレーション層抽出（R1）
  
 - [x] internal/app/app.go — Config 型の定義。TargetPath, TopN, Depth, OutputFormat(text/json/tree/html), Exclude[]string, OlderThanDays のフィールドを持つ
-- [ ] internal/app/app.go — Run(cfg Config, stdout io.Writer, stderr io.Writer) error 関数のシグネチャと空実装。main.go から呼べることを確認
+- [x] internal/app/app.go — Run(cfg Config, stdout io.Writer, stderr io.Writer) error 関数のシグネチャと空実装。main.go から呼べることを確認
 - [ ] main.go → internal/app/app.go — flag 解析ロジックを ParseFlags(args []string) (Config, error) として移動。main.go は ParseFlags → Run だけにする
 - [ ] internal/app/app.go — Run 関数にスキャン → 分析 → 出力のロジックを main.go から移植。main.go は 20 行以内になること
 - [ ] internal/app/app_test.go — Run 関数の基本テスト。テスト用 tmpdir をスキャンして出力が空でないことを確認

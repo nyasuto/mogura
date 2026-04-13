@@ -1,5 +1,7 @@
 package app
 
+import "io"
+
 type OutputFormat string
 
 const (
@@ -16,4 +18,8 @@ type Config struct {
 	OutputFormat OutputFormat
 	Exclude      []string
 	OlderThanDays int
+}
+
+func Run(cfg Config, stdout io.Writer, stderr io.Writer) error {
+	return nil
 }

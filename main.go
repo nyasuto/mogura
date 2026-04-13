@@ -8,6 +8,7 @@ import (
 
 	"mogura/internal"
 	"mogura/internal/analyzer"
+	"mogura/internal/app"
 	"mogura/internal/formatter"
 	"mogura/internal/scanner"
 )
@@ -30,6 +31,8 @@ func main() {
 	}
 
 	root := flag.Arg(0)
+
+	_ = app.Run // 後続タスクで使用
 
 	files, err := scanner.Scan(root)
 	if err != nil {
