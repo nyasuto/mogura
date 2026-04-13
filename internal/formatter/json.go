@@ -36,13 +36,13 @@ func RenderJSON(r Report) (string, error) {
 	return string(b), nil
 }
 
-func FormatJSON(result analyzer.Result, w io.Writer) error {
+func buildReport(result analyzer.Result) Report {
 	var wasteTotal int64
 	for _, wd := range result.WasteDirs {
 		wasteTotal += wd.Size
 	}
 
-	report := Report{
+	return Report{
 		TotalSize:    result.TotalSize,
 		ScannedAt:    result.ScannedAt,
 		DirTree:      result.DirTree,
@@ -57,7 +57,10 @@ func FormatJSON(result analyzer.Result, w io.Writer) error {
 		},
 		SavingsEstimate: wasteTotal + result.StaleSummary.TotalSize,
 	}
+}
 
+func FormatJSON(result analyzer.Result, w io.Writer) error {
+	report := buildReport(result)
 	out, err := RenderJSON(report)
 	if err != nil {
 		return err
