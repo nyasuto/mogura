@@ -178,7 +178,7 @@
 - [x] internal/analyzer/extension.go / category.go — ExtStats / CategoryStats に PhysicalSize を追加 + テスト更新
 - [x] internal/analyzer/topn.go — 巨大ファイル Top は論理サイズで並べたうえで物理サイズも保持（並び順は現行維持）
 - [x] internal/analyzer/tree.go — DirNode に PhysicalSize を追加し BuildTree / Prune で積み上げ + テスト
-- [ ] internal/analyzer/stale.go / waste.go — StaleResult / WasteDir にも PhysicalSize を追加
+- [x] internal/analyzer/stale.go / waste.go — StaleResult / WasteDir にも PhysicalSize を追加
 - [ ] internal/analyzer/analyze.go — Analyze 内で各集計を新フィールドで埋める。SavingsEstimate 相当は物理サイズベースで計算する
 
 ### 9-C: 表示への反映
@@ -233,6 +233,44 @@
 - [ ] 実機ベンチ: Phase 10-A 単独版 vs 10-A + 10-B darwin 版で `~/Library` のスキャン時間を比較。README に結果記録
 - [ ] フォールバック検証: darwin でも `-bulkstat=false` フラグ（あるいは内部切替）で従来経路に戻せることを確認。何か問題が出た時の脱出口として残す
 - [ ] CLAUDE.md 更新: 「外部依存ゼロ」の例外として `golang.org/x/sys` を明示（方針決定タスクの結果次第）
+
+
+## Phase 11: 開発エコシステム（GitHub Actions + Dependabot）
+
+> ローカルの `make quality` だけでなく、push / PR 時に自動で検証が走る CI パイプラインを整備する。さらに dependabot で依存の追従を自動化する（現状は標準ライブラリのみだが、Phase 10-B で `golang.org/x/sys` を入れる可能性があり、その時点で効いてくる）。GitHub Actions 公式アクションはすべて無料枠で動く。
+
+### 11-A: CI ワークフロー（test + quality）
+
+- [ ] `.github/workflows/ci.yml` 作成。trigger は `push`（main）と `pull_request`。Go 版数は go.mod の `go` ディレクティブから自動取得（`actions/setup-go` の `go-version-file: go.mod`）
+- [ ] ジョブ内容: `go vet ./...` → `gofmt -l ./...`（差分あれば fail）→ `go test -race ./...` → `go build ./...`。これは `make quality` とほぼ同じだが `-race` を追加して競合検出も同時に回す
+- [ ] matrix で `ubuntu-latest` と `macos-latest` の両方で回す（Phase 10-B の darwin build tag 検証のため macOS 必須）
+- [ ] キャッシュ設定: `actions/setup-go` の組み込みキャッシュ（`cache: true`）で go modules と build cache を保持。CI 時間短縮
+
+### 11-B: golangci-lint 導入（任意・品質ゲート強化）
+
+- [ ] `.golangci.yml` を作成。有効化する linter は errcheck / govet / ineffassign / staticcheck / unused / gosimple / misspell あたりから開始。厳しすぎると PR が通らないので段階導入
+- [ ] `.github/workflows/ci.yml` に golangci-lint ジョブを追加（`golangci/golangci-lint-action@v6` 公式アクション使用）
+- [ ] ローカルでも `make lint` ターゲットを Makefile に追加（CI と同じ設定で走るように）
+
+### 11-C: リリースワークフロー（タグ駆動）
+
+- [ ] `.github/workflows/release.yml` 作成。trigger は `push.tags: 'v*'`
+- [ ] `goreleaser-action` を使って darwin/amd64, darwin/arm64, linux/amd64, linux/arm64 のバイナリをビルド・Release に添付
+- [ ] `.goreleaser.yml` を作成。CLAUDE.md の「外部依存ゼロ」方針は build 時の話なので goreleaser 自体は問題なし
+- [ ] （将来）Homebrew Tap 対応: goreleaser の `brews` セクションで自動 formula 生成（別リポジトリ `homebrew-mogura` が必要、今は延期）
+
+### 11-D: Dependabot
+
+- [ ] `.github/dependabot.yml` 作成
+- [ ] `gomod` エコシステムを有効化（`directory: "/"`, `schedule.interval: weekly`）。現状は依存ゼロだが将来 `golang.org/x/sys` を入れる可能性があるので先に設定しておく
+- [ ] `github-actions` エコシステムを有効化（`actions/setup-go` 等のバージョン追従）。これは今日から効く
+- [ ] PR の自動マージまでは設定しない（人間レビュー必須）。ラベル `dependencies` だけ付与する設定
+
+### 11-E: バッジと README 整備
+
+- [ ] README.md の冒頭に CI バッジ（`https://github.com/<user>/mogura/actions/workflows/ci.yml/badge.svg`）を追加
+- [ ] CONTRIBUTING.md（新規）に「PR 前に `make quality` を通すこと」「CI は ubuntu + macOS で回る」と明記
+- [ ] `make quality` と CI の内容が一致していることをドキュメントで保証
 
 
 ---

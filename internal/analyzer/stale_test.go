@@ -13,13 +13,14 @@ func TestDetectStale(t *testing.T) {
 	recent := now.AddDate(0, -1, 0)
 
 	tests := []struct {
-		name      string
-		files     []internal.FileInfo
-		days      int
-		wantTotal int64
-		wantFiles int
-		wantDirs  int
-		wantFirst StaleDirSummary
+		name          string
+		files         []internal.FileInfo
+		days          int
+		wantTotal     int64
+		wantTotalPhys int64
+		wantFiles     int
+		wantDirs      int
+		wantFirst     StaleDirSummary
 	}{
 		{
 			name:      "empty input",
@@ -32,7 +33,7 @@ func TestDetectStale(t *testing.T) {
 		{
 			name: "no stale files",
 			files: []internal.FileInfo{
-				{Path: "/a/b.txt", Size: 100, Dir: "/a", ModTime: recent},
+				{Path: "/a/b.txt", Size: 100, PhysicalSize: 100, Dir: "/a", ModTime: recent},
 			},
 			days:      365,
 			wantTotal: 0,
@@ -42,45 +43,48 @@ func TestDetectStale(t *testing.T) {
 		{
 			name: "all stale",
 			files: []internal.FileInfo{
-				{Path: "/a/b.txt", Size: 100, Dir: "/a", ModTime: old},
-				{Path: "/a/c.txt", Size: 200, Dir: "/a", ModTime: old},
+				{Path: "/a/b.txt", Size: 100, PhysicalSize: 80, Dir: "/a", ModTime: old},
+				{Path: "/a/c.txt", Size: 200, PhysicalSize: 150, Dir: "/a", ModTime: old},
 			},
-			days:      365,
-			wantTotal: 300,
-			wantFiles: 2,
-			wantDirs:  1,
-			wantFirst: StaleDirSummary{Dir: "/a", Size: 300, FileCount: 2},
+			days:          365,
+			wantTotal:     300,
+			wantTotalPhys: 230,
+			wantFiles:     2,
+			wantDirs:      1,
+			wantFirst:     StaleDirSummary{Dir: "/a", Size: 300, PhysicalSize: 230, FileCount: 2},
 		},
 		{
 			name: "mixed stale and recent",
 			files: []internal.FileInfo{
-				{Path: "/a/old.txt", Size: 500, Dir: "/a", ModTime: old},
-				{Path: "/a/new.txt", Size: 100, Dir: "/a", ModTime: recent},
-				{Path: "/b/old.txt", Size: 300, Dir: "/b", ModTime: old},
+				{Path: "/a/old.txt", Size: 500, PhysicalSize: 400, Dir: "/a", ModTime: old},
+				{Path: "/a/new.txt", Size: 100, PhysicalSize: 100, Dir: "/a", ModTime: recent},
+				{Path: "/b/old.txt", Size: 300, PhysicalSize: 250, Dir: "/b", ModTime: old},
 			},
-			days:      365,
-			wantTotal: 800,
-			wantFiles: 2,
-			wantDirs:  2,
-			wantFirst: StaleDirSummary{Dir: "/a", Size: 500, FileCount: 1},
+			days:          365,
+			wantTotal:     800,
+			wantTotalPhys: 650,
+			wantFiles:     2,
+			wantDirs:      2,
+			wantFirst:     StaleDirSummary{Dir: "/a", Size: 500, PhysicalSize: 400, FileCount: 1},
 		},
 		{
 			name: "sorted by size descending",
 			files: []internal.FileInfo{
-				{Path: "/small/a.txt", Size: 100, Dir: "/small", ModTime: old},
-				{Path: "/big/b.txt", Size: 1000, Dir: "/big", ModTime: old},
-				{Path: "/mid/c.txt", Size: 500, Dir: "/mid", ModTime: old},
+				{Path: "/small/a.txt", Size: 100, PhysicalSize: 100, Dir: "/small", ModTime: old},
+				{Path: "/big/b.txt", Size: 1000, PhysicalSize: 800, Dir: "/big", ModTime: old},
+				{Path: "/mid/c.txt", Size: 500, PhysicalSize: 500, Dir: "/mid", ModTime: old},
 			},
-			days:      365,
-			wantTotal: 1600,
-			wantFiles: 3,
-			wantDirs:  3,
-			wantFirst: StaleDirSummary{Dir: "/big", Size: 1000, FileCount: 1},
+			days:          365,
+			wantTotal:     1600,
+			wantTotalPhys: 1400,
+			wantFiles:     3,
+			wantDirs:      3,
+			wantFirst:     StaleDirSummary{Dir: "/big", Size: 1000, PhysicalSize: 800, FileCount: 1},
 		},
 		{
 			name: "exact boundary not stale",
 			files: []internal.FileInfo{
-				{Path: "/a/exact.txt", Size: 100, Dir: "/a", ModTime: now.AddDate(0, 0, -365)},
+				{Path: "/a/exact.txt", Size: 100, PhysicalSize: 100, Dir: "/a", ModTime: now.AddDate(0, 0, -365)},
 			},
 			days:      365,
 			wantTotal: 0,
@@ -90,13 +94,14 @@ func TestDetectStale(t *testing.T) {
 		{
 			name: "one day past boundary is stale",
 			files: []internal.FileInfo{
-				{Path: "/a/past.txt", Size: 100, Dir: "/a", ModTime: now.AddDate(0, 0, -366)},
+				{Path: "/a/past.txt", Size: 100, PhysicalSize: 50, Dir: "/a", ModTime: now.AddDate(0, 0, -366)},
 			},
-			days:      365,
-			wantTotal: 100,
-			wantFiles: 1,
-			wantDirs:  1,
-			wantFirst: StaleDirSummary{Dir: "/a", Size: 100, FileCount: 1},
+			days:          365,
+			wantTotal:     100,
+			wantTotalPhys: 50,
+			wantFiles:     1,
+			wantDirs:      1,
+			wantFirst:     StaleDirSummary{Dir: "/a", Size: 100, PhysicalSize: 50, FileCount: 1},
 		},
 	}
 
@@ -106,6 +111,9 @@ func TestDetectStale(t *testing.T) {
 
 			if got.TotalSize != tt.wantTotal {
 				t.Errorf("TotalSize: got %d, want %d", got.TotalSize, tt.wantTotal)
+			}
+			if got.TotalPhysicalSize != tt.wantTotalPhys {
+				t.Errorf("TotalPhysicalSize: got %d, want %d", got.TotalPhysicalSize, tt.wantTotalPhys)
 			}
 			if got.TotalFiles != tt.wantFiles {
 				t.Errorf("TotalFiles: got %d, want %d", got.TotalFiles, tt.wantFiles)
@@ -120,6 +128,9 @@ func TestDetectStale(t *testing.T) {
 				}
 				if first.Size != tt.wantFirst.Size {
 					t.Errorf("first size: got %d, want %d", first.Size, tt.wantFirst.Size)
+				}
+				if first.PhysicalSize != tt.wantFirst.PhysicalSize {
+					t.Errorf("first physical size: got %d, want %d", first.PhysicalSize, tt.wantFirst.PhysicalSize)
 				}
 				if first.FileCount != tt.wantFirst.FileCount {
 					t.Errorf("first file count: got %d, want %d", first.FileCount, tt.wantFirst.FileCount)

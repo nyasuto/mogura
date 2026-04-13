@@ -8,9 +8,10 @@ import (
 )
 
 type WasteDir struct {
-	Path string `json:"path"`
-	Size int64  `json:"size"`
-	Kind string `json:"kind"`
+	Path         string `json:"path"`
+	Size         int64  `json:"size"`
+	PhysicalSize int64  `json:"physical_size"`
+	Kind         string `json:"kind"`
 }
 
 var wastePatterns = map[string]string{
@@ -50,6 +51,7 @@ const DefaultGitSizeThreshold int64 = 100 * 1024 * 1024 // 100MB
 
 func DetectLargeGitDirs(files []internal.FileInfo, threshold int64) []WasteDir {
 	gitSizes := make(map[string]int64)
+	gitPhysical := make(map[string]int64)
 
 	sep := string(filepath.Separator)
 	target := sep + ".git" + sep
@@ -62,15 +64,17 @@ func DetectLargeGitDirs(files []internal.FileInfo, threshold int64) []WasteDir {
 		}
 		gitPath := f.Dir[:idx+len(target)-1]
 		gitSizes[gitPath] += f.Size
+		gitPhysical[gitPath] += f.PhysicalSize
 	}
 
 	var result []WasteDir
 	for path, size := range gitSizes {
 		if size >= threshold {
 			result = append(result, WasteDir{
-				Path: path,
-				Size: size,
-				Kind: "git",
+				Path:         path,
+				Size:         size,
+				PhysicalSize: gitPhysical[path],
+				Kind:         "git",
 			})
 		}
 	}
@@ -84,11 +88,13 @@ func DetectLargeGitDirs(files []internal.FileInfo, threshold int64) []WasteDir {
 
 func DetectWaste(files []internal.FileInfo) []WasteDir {
 	wasteSizes := make(map[string]int64)
+	wastePhysical := make(map[string]int64)
 	wasteKinds := make(map[string]string)
 
 	for _, f := range files {
 		if wastePath, kind, ok := findWasteMatch(f.Dir); ok {
 			wasteSizes[wastePath] += f.Size
+			wastePhysical[wastePath] += f.PhysicalSize
 			wasteKinds[wastePath] = kind
 		}
 	}
@@ -96,9 +102,10 @@ func DetectWaste(files []internal.FileInfo) []WasteDir {
 	result := make([]WasteDir, 0, len(wasteSizes))
 	for path, size := range wasteSizes {
 		result = append(result, WasteDir{
-			Path: path,
-			Size: size,
-			Kind: wasteKinds[path],
+			Path:         path,
+			Size:         size,
+			PhysicalSize: wastePhysical[path],
+			Kind:         wasteKinds[path],
 		})
 	}
 
