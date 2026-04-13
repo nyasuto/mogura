@@ -224,7 +224,8 @@
 
 > `getattrlistbulk(2)` は 1 syscall で 1 ディレクトリ内の全エントリの stat を返す macOS 10.10+ の API。readdir + lstat ループに比べ syscall 数が 1/N になり、APFS で 3〜8 倍の高速化が期待できる。Linux は将来 10-C として statx + getdents64 で同等のことをやる（本 Phase ではやらない）。**外部依存ポリシー要判断**: `golang.org/x/sys/unix` を導入するか、`syscall.Syscall6` で直接叩くか、Phase 10-B 着手時点で決める。
 
-- [ ] **方針決定タスク**: `golang.org/x/sys` を外部依存として許容するか、`syscall.Syscall6` + `unsafe.Pointer` で直接 ABI を叩くかを決める。CLAUDE.md の「外部依存ゼロ」方針の扱いも同時に再確認（OS 特化の syscall ラッパは事実上の標準扱いにするのが現実的。判断を CLAUDE.md に追記）
+- [x] **方針決定タスク**: `golang.org/x/sys` を外部依存として許容するか、`syscall.Syscall6` + `unsafe.Pointer` で直接 ABI を叩くかを決める。CLAUDE.md の「外部依存ゼロ」方針の扱いも同時に再確認（OS 特化の syscall ラッパは事実上の標準扱いにするのが現実的。判断を CLAUDE.md に追記）
+  > **決定**: `golang.org/x/sys/unix` を例外として許容。Go チーム公式メンテナンスの準標準ライブラリであり、getattrlistbulk の可変長バッファ解析を型安全に行うために必要。raw syscall.Syscall6 + unsafe.Pointer は ABI ミスのリスクが高く不採用。
 - [ ] internal/scanner/bulkstat_darwin.go — darwin build tag (`//go:build darwin`) で getattrlistbulk ラッパを実装。`struct attrlist` / `ATTR_BIT_MAP_COUNT` / `ATTR_CMN_NAME` / `ATTR_CMN_OBJTYPE` / `ATTR_CMN_MODTIME` / `ATTR_FILE_TOTALSIZE` / `ATTR_FILE_ALLOCSIZE`（= 物理サイズ、Phase 9 と連携）を取得
 - [ ] internal/scanner/bulkstat_darwin.go — readDirBulk(path string) ([]bulkEntry, error) 関数として公開。1 回の呼び出しで 1 バッファ分（通常 64〜256 エントリ）、eof まで繰り返し呼ぶ。属性バッファのパース（可変長レコードのため offset 計算に注意）をユニットテストでカバー
 - [ ] internal/scanner/bulkstat_other.go — darwin 以外の build tag (`//go:build !darwin`) で readDirBulk をスタブ実装（`os.ReadDir` + `os.Lstat` にフォールバック）。型とシグネチャを darwin 版と揃える
