@@ -233,7 +233,7 @@
 - [x] internal/scanner/bulkstat_darwin_test.go — darwin 限定テスト（build tag で制限）。一時ディレクトリに各種ファイル（regular / dir / symlink / スパース）を作り、readDirBulk の結果が Lstat と一致することを検証
 - [x] 実機ベンチ: Phase 10-A 単独版 vs 10-A + 10-B darwin 版で `~/Library` のスキャン時間を比較。README に結果記録
 - [x] フォールバック検証: darwin でも `-bulkstat=false` フラグ（あるいは内部切替）で従来経路に戻せることを確認。何か問題が出た時の脱出口として残す
-- [ ] CLAUDE.md 更新: 「外部依存ゼロ」の例外として `golang.org/x/sys` を明示（方針決定タスクの結果次第）
+- [x] CLAUDE.md 更新: 「外部依存ゼロ」の例外として `golang.org/x/sys` を明示（方針決定タスクの結果次第）
 
 
 ## Phase 11: 開発エコシステム（GitHub Actions + Dependabot）
