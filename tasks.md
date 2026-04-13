@@ -142,7 +142,7 @@
 ### 8-A: ASCII 棒グラフ（V1）
  
 - [x] internal/formatter/bar.go — RenderBar(value, maxValue, width int) string 関数。`████████░░░░` を返す + テスト
-- [ ] internal/formatter/table.go — カテゴリ・拡張子・ディレクトリのテーブル行末に RenderBar を追加
+- [x] internal/formatter/table.go — カテゴリ・拡張子・ディレクトリのテーブル行末に RenderBar を追加
  
 ### 8-B: フィルタ（F7）
  

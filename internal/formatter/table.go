@@ -11,6 +11,8 @@ import (
 	"mogura/internal/analyzer"
 )
 
+const barWidth = 20
+
 var ansiRe = regexp.MustCompile(`\033\[[0-9;]*m`)
 
 func displayWidth(s string) int {
@@ -111,12 +113,18 @@ func PrintDirTable(w io.Writer, dirSizes map[string]int64, limit int) {
 		entries = entries[:limit]
 	}
 
+	var maxSize int64
+	if len(entries) > 0 {
+		maxSize = entries[0].Size
+	}
+
 	tbl := Table{
-		Header:     Row{"Path", "Size"},
-		RightAlign: []bool{false, true},
+		Header:     Row{"Path", "Size", ""},
+		RightAlign: []bool{false, true, false},
 	}
 	for _, e := range entries {
-		tbl.Rows = append(tbl.Rows, Row{e.Path, internal.FormatSize(e.Size)})
+		bar := RenderBar(int(e.Size), int(maxSize), barWidth)
+		tbl.Rows = append(tbl.Rows, Row{e.Path, internal.FormatSize(e.Size), bar})
 	}
 	fmt.Fprint(w, tbl.Render())
 }
@@ -141,12 +149,18 @@ func PrintExtTable(w io.Writer, extStats map[string]analyzer.ExtStats, limit int
 		entries = entries[:limit]
 	}
 
+	var maxSize int64
+	if len(entries) > 0 {
+		maxSize = entries[0].Size
+	}
+
 	tbl := Table{
-		Header:     Row{"Ext", "Size", "Count"},
-		RightAlign: []bool{false, true, true},
+		Header:     Row{"Ext", "Size", "Count", ""},
+		RightAlign: []bool{false, true, true, false},
 	}
 	for _, e := range entries {
-		tbl.Rows = append(tbl.Rows, Row{e.Ext, internal.FormatSize(e.Size), fmt.Sprintf("%d", e.Count)})
+		bar := RenderBar(int(e.Size), int(maxSize), barWidth)
+		tbl.Rows = append(tbl.Rows, Row{e.Ext, internal.FormatSize(e.Size), fmt.Sprintf("%d", e.Count), bar})
 	}
 	fmt.Fprint(w, tbl.Render())
 }
@@ -168,16 +182,23 @@ func PrintCategoryTable(w io.Writer, catStats map[analyzer.Category]analyzer.Cat
 		return entries[i].Size > entries[j].Size
 	})
 
+	var maxSize int64
+	if len(entries) > 0 {
+		maxSize = entries[0].Size
+	}
+
 	tbl := Table{
-		Header:     Row{"Category", "Size", "Count", "%"},
-		RightAlign: []bool{false, true, true, true},
+		Header:     Row{"Category", "Size", "Count", "%", ""},
+		RightAlign: []bool{false, true, true, true, false},
 	}
 	for _, e := range entries {
+		bar := RenderBar(int(e.Size), int(maxSize), barWidth)
 		tbl.Rows = append(tbl.Rows, Row{
 			string(e.Category),
 			internal.FormatSize(e.Size),
 			fmt.Sprintf("%d", e.Count),
 			fmt.Sprintf("%.1f%%", e.Percent),
+			bar,
 		})
 	}
 	fmt.Fprint(w, tbl.Render())

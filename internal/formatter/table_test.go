@@ -78,6 +78,48 @@ func TestRender(t *testing.T) {
 	}
 }
 
+func TestPrintDirTableHasBar(t *testing.T) {
+	dirSizes := map[string]int64{
+		"/big":   2000,
+		"/small": 1000,
+	}
+	var buf bytes.Buffer
+	PrintDirTable(&buf, dirSizes, 10)
+	output := buf.String()
+	if !strings.Contains(output, "█") {
+		t.Error("expected bar characters in dir table output")
+	}
+	if !strings.Contains(output, "░") {
+		t.Error("expected empty bar characters in dir table output")
+	}
+}
+
+func TestPrintExtTableHasBar(t *testing.T) {
+	extStats := map[string]analyzer.ExtStats{
+		".go":  {Size: 3000, Count: 10},
+		".txt": {Size: 1000, Count: 5},
+	}
+	var buf bytes.Buffer
+	PrintExtTable(&buf, extStats, 10)
+	output := buf.String()
+	if !strings.Contains(output, "█") {
+		t.Error("expected bar characters in ext table output")
+	}
+}
+
+func TestPrintCategoryTableHasBar(t *testing.T) {
+	catStats := map[analyzer.Category]analyzer.CategoryStats{
+		"Code":  {Size: 5000, Count: 20, Percent: 80.0},
+		"Other": {Size: 1000, Count: 5, Percent: 20.0},
+	}
+	var buf bytes.Buffer
+	PrintCategoryTable(&buf, catStats)
+	output := buf.String()
+	if !strings.Contains(output, "█") {
+		t.Error("expected bar characters in category table output")
+	}
+}
+
 func TestFormatDiffTable(t *testing.T) {
 	tests := []struct {
 		name  string
