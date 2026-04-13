@@ -1,8 +1,13 @@
 package scanner
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
+	"syscall"
 
 	"mogura/internal"
 )
@@ -57,22 +62,89 @@ func newParallelScanner(root string, opts ScanOpts) *parallelScanner {
 }
 
 func (ps *parallelScanner) start() {
+	var workerWg sync.WaitGroup
 	for i := 0; i < ps.workers; i++ {
-		ps.wg.Add(1)
+		workerWg.Add(1)
 		go func() {
-			defer ps.wg.Done()
+			defer workerWg.Done()
 			for task := range ps.taskCh {
 				ps.processDir(task)
+				ps.wg.Done()
 			}
 		}()
 	}
+
+	go func() {
+		ps.wg.Wait()
+		close(ps.taskCh)
+		workerWg.Wait()
+		close(ps.resultCh)
+	}()
 }
 
-func (ps *parallelScanner) wait() {
-	ps.wg.Wait()
-	close(ps.resultCh)
+func (ps *parallelScanner) enqueue(path string) {
+	ps.wg.Add(1)
+	ps.taskCh <- dirTask{path: path}
 }
 
-func (ps *parallelScanner) processDir(_ dirTask) {
-	// Will be implemented in workerFn task
+func (ps *parallelScanner) processDir(task dirTask) {
+	entries, err := os.ReadDir(task.path)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: %s: %v\n", task.path, err)
+		return
+	}
+
+	for _, entry := range entries {
+		name := entry.Name()
+		path := filepath.Join(task.path, name)
+
+		if entry.Type()&os.ModeSymlink != 0 {
+			continue
+		}
+
+		if entry.IsDir() {
+			if matchesExclude(name, ps.exactSet, ps.globs) {
+				continue
+			}
+			if ps.opts.OneFileSystem {
+				dev, devErr := deviceID(path)
+				if devErr != nil {
+					fmt.Fprintf(os.Stderr, "warning: %s: %v\n", path, devErr)
+					continue
+				}
+				if dev != ps.rootDev {
+					continue
+				}
+			}
+			ps.wg.Add(1)
+			go func(p string) { ps.taskCh <- dirTask{path: p} }(path)
+			continue
+		}
+
+		if matchesExclude(name, ps.exactSet, ps.globs) {
+			continue
+		}
+
+		info, infoErr := entry.Info()
+		if infoErr != nil {
+			fmt.Fprintf(os.Stderr, "warning: %s: %v\n", path, infoErr)
+			continue
+		}
+
+		var physicalSize int64
+		if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+			physicalSize = stat.Blocks * 512
+		} else {
+			physicalSize = info.Size()
+		}
+
+		ps.resultCh <- internal.FileInfo{
+			Path:         path,
+			Size:         info.Size(),
+			PhysicalSize: physicalSize,
+			Dir:          task.path,
+			Ext:          strings.ToLower(filepath.Ext(name)),
+			ModTime:      info.ModTime(),
+		}
+	}
 }
