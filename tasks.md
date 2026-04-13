@@ -196,8 +196,8 @@
 
 ### 9-E: 検証
 
-- [ ] `./mogura ~` を実行し、Docker.raw の物理サイズが `du -sh` と一致することを確認
-- [ ] `./mogura -diff` が既存の JSON スナップショット（physical_size フィールド無し）を読み込んでも壊れないことを確認（後方互換）
+- [x] `./mogura ~` を実行し、Docker.raw の物理サイズが `du -sh` と一致することを確認
+- [x] `./mogura -diff` が既存の JSON スナップショット（physical_size フィールド無し）を読み込んでも壊れないことを確認（後方互換）
 
 
 ## Phase 10: 高速化（並列 walk + OS 最適化 syscall）
