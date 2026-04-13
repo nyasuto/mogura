@@ -16,7 +16,13 @@
         .legend { display: flex; flex-wrap: wrap; gap: 12px; padding: 8px 0; }
         .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
         .legend-color { width: 14px; height: 14px; border-radius: 3px; }
-        .treemap-node { position: absolute; overflow: hidden; border: 1px solid rgba(0,0,0,0.3); cursor: default; }
+        .breadcrumb { display: flex; align-items: center; gap: 4px; padding: 8px 0; font-size: 13px; flex-wrap: wrap; }
+        .breadcrumb-item { color: #4a90d9; cursor: pointer; text-decoration: none; }
+        .breadcrumb-item:hover { text-decoration: underline; }
+        .breadcrumb-sep { color: #555; }
+        .breadcrumb-current { color: #e0e0e0; }
+        .treemap-node { position: absolute; overflow: hidden; border: 1px solid rgba(0,0,0,0.3); cursor: pointer; transition: opacity 0.1s; }
+        .treemap-node:hover { opacity: 0.85; }
         .treemap-node .node-label { padding: 4px 6px; font-size: 11px; line-height: 1.3; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); pointer-events: none; }
         .treemap-node .node-label .node-name { font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .treemap-node .node-label .node-size { font-size: 10px; opacity: 0.85; display: block; }
@@ -29,6 +35,7 @@
     </div>
     <div class="container">
         <div class="legend" id="legend"></div>
+        <div class="breadcrumb" id="breadcrumb"></div>
         <div id="treemap"></div>
     </div>
     <script>
@@ -76,57 +83,107 @@
         });
 
         var container = document.getElementById("treemap");
-        var width = container.clientWidth;
-        var height = container.clientHeight;
+        var breadcrumbEl = document.getElementById("breadcrumb");
+        var navStack = [];
 
-        var tree = data.dir_tree;
-        if (!tree.children || tree.children.length === 0) {
-            tree.children = [{ name: tree.name, size: tree.size, file_count: tree.file_count }];
+        function renderBreadcrumb(stack, currentNode) {
+            breadcrumbEl.innerHTML = "";
+            var items = [data.dir_tree].concat(stack);
+            for (var i = 0; i < items.length; i++) {
+                if (i > 0) {
+                    var sep = document.createElement("span");
+                    sep.className = "breadcrumb-sep";
+                    sep.textContent = " / ";
+                    breadcrumbEl.appendChild(sep);
+                }
+                var isLast = (i === items.length - 1);
+                var span = document.createElement("span");
+                span.textContent = items[i].name;
+                if (isLast) {
+                    span.className = "breadcrumb-current";
+                } else {
+                    span.className = "breadcrumb-item";
+                    (function(depth) {
+                        span.addEventListener("click", function() {
+                            navStack = navStack.slice(0, depth);
+                            var target = data.dir_tree;
+                            for (var j = 0; j < navStack.length; j++) {
+                                target = navStack[j];
+                            }
+                            renderTreemap(target);
+                        });
+                    })(i);
+                }
+                breadcrumbEl.appendChild(span);
+            }
         }
 
-        var root = d3.hierarchy(tree)
-            .sum(function(d) { return d.children && d.children.length > 0 ? 0 : d.size; })
-            .sort(function(a, b) { return b.value - a.value; });
+        function renderTreemap(treeNode) {
+            container.innerHTML = "";
+            var width = container.clientWidth;
+            var height = container.clientHeight;
 
-        d3.treemap()
-            .size([width, height])
-            .paddingInner(2)
-            .paddingOuter(2)
-            .round(true)(root);
-
-        var leaves = root.leaves();
-
-        leaves.forEach(function(leaf, i) {
-            var div = document.createElement("div");
-            div.className = "treemap-node";
-            div.style.left = leaf.x0 + "px";
-            div.style.top = leaf.y0 + "px";
-            div.style.width = (leaf.x1 - leaf.x0) + "px";
-            div.style.height = (leaf.y1 - leaf.y0) + "px";
-
-            div.style.backgroundColor = getCategoryColor(leaf);
-
-            var nodeW = leaf.x1 - leaf.x0;
-            var nodeH = leaf.y1 - leaf.y0;
-
-            if (nodeW > 30 && nodeH > 20) {
-                var label = document.createElement("div");
-                label.className = "node-label";
-                var nameSpan = document.createElement("span");
-                nameSpan.className = "node-name";
-                nameSpan.textContent = leaf.data.name;
-                label.appendChild(nameSpan);
-                if (nodeH > 35) {
-                    var sizeSpan = document.createElement("span");
-                    sizeSpan.className = "node-size";
-                    sizeSpan.textContent = formatSize(leaf.data.size);
-                    label.appendChild(sizeSpan);
-                }
-                div.appendChild(label);
+            var node = treeNode;
+            if (!node.children || node.children.length === 0) {
+                node = { name: node.name, size: node.size, file_count: node.file_count, dominant_category: node.dominant_category, children: [node] };
             }
 
-            container.appendChild(div);
-        });
+            var root = d3.hierarchy(node)
+                .sum(function(d) { return d.children && d.children.length > 0 ? 0 : d.size; })
+                .sort(function(a, b) { return b.value - a.value; });
+
+            d3.treemap()
+                .size([width, height])
+                .paddingInner(2)
+                .paddingOuter(2)
+                .round(true)(root);
+
+            var leaves = root.leaves();
+
+            leaves.forEach(function(leaf) {
+                var div = document.createElement("div");
+                div.className = "treemap-node";
+                div.style.left = leaf.x0 + "px";
+                div.style.top = leaf.y0 + "px";
+                div.style.width = (leaf.x1 - leaf.x0) + "px";
+                div.style.height = (leaf.y1 - leaf.y0) + "px";
+                div.style.backgroundColor = getCategoryColor(leaf);
+
+                var original = leaf.data;
+                if (original.children && original.children.length > 0) {
+                    div.addEventListener("click", function() {
+                        navStack.push(original);
+                        renderTreemap(original);
+                    });
+                }
+
+                var nodeW = leaf.x1 - leaf.x0;
+                var nodeH = leaf.y1 - leaf.y0;
+
+                if (nodeW > 30 && nodeH > 20) {
+                    var label = document.createElement("div");
+                    label.className = "node-label";
+                    var nameSpan = document.createElement("span");
+                    nameSpan.className = "node-name";
+                    nameSpan.textContent = leaf.data.name;
+                    label.appendChild(nameSpan);
+                    if (nodeH > 35) {
+                        var sizeSpan = document.createElement("span");
+                        sizeSpan.className = "node-size";
+                        sizeSpan.textContent = formatSize(leaf.data.size);
+                        label.appendChild(sizeSpan);
+                    }
+                    div.appendChild(label);
+                }
+
+                container.appendChild(div);
+            });
+
+            renderBreadcrumb(navStack, treeNode);
+        }
+
+        var tree = data.dir_tree;
+        renderTreemap(tree);
     </script>
 </body>
 </html>
