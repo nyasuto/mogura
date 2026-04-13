@@ -115,7 +115,7 @@
 ### 6-D: CLI 統合
  
 - [x] internal/app/app.go — OutputFormat が html のとき FormatHTML を呼び出す分岐を追加
-- [ ] main.go / flags — `-html` フラグの追加。stdout に HTML を出力（`mogura --html ~ > report.html`）
+- [x] main.go / flags — `-html` フラグの追加。stdout に HTML を出力（`mogura --html ~ > report.html`）
 - [ ] README.md に HTML レポートの使い方とスクリーンショット説明を追記
  
 ## Phase 7: 差分モード

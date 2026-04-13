@@ -35,6 +35,7 @@ func ParseFlags(args []string) (Config, error) {
 
 	jsonFlag := fs.Bool("json", false, "JSON 形式で出力")
 	treeFlag := fs.Bool("tree", false, "ツリー形式で出力")
+	htmlFlag := fs.Bool("html", false, "HTML レポートを出力")
 	depth := fs.Int("depth", 3, "ツリー表示の深さ")
 	top := fs.Int("top", 20, "巨大ファイル表示件数")
 	olderThan := fs.Int("older-than", 365, "古いファイルの判定日数")
@@ -60,6 +61,8 @@ func ParseFlags(args []string) (Config, error) {
 		format = FormatJSON
 	case *treeFlag:
 		format = FormatTree
+	case *htmlFlag:
+		format = FormatHTML
 	}
 
 	var excludes []string
