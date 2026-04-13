@@ -192,7 +192,7 @@
 
 - [x] internal/app/app.go — Config に SizeMode（"logical" / "physical"）を追加。`-size-mode` フラグで切替
 - [x] デフォルトは "logical"。ただしサマリの「推定節約可能量」だけは常に物理サイズで計算（嘘にならないように）
-- [ ] README.md にスパース対応の説明セクション追加。Docker.raw / diffdisk の実例を掲載
+- [x] README.md にスパース対応の説明セクション追加。Docker.raw / diffdisk の実例を掲載
 
 ### 9-E: 検証
 
