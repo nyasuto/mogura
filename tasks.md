@@ -208,8 +208,8 @@
 
 > `filepath.WalkDir` は単一 goroutine でディレクトリを順次走査するためディスク I/O 待ちがボトルネック。worker pool + ディレクトリタスクキューに書き換え、SSD で 3〜5 倍の高速化を狙う。scanner 内部の差し替えだけで済み、外部依存は増えない。
 
-- [ ] internal/scanner/parallel.go — 新ファイルを作成。ディレクトリタスク用 channel と sync.WaitGroup を用いた worker pool の骨格を実装（worker 数は runtime.NumCPU() デフォルト、ScanOpts.Workers でオーバーライド可）
-- [ ] internal/scanner/scanner.go — ScanOpts に Workers int フィールドを追加（0 なら NumCPU()）
+- [x] internal/scanner/parallel.go — 新ファイルを作成。ディレクトリタスク用 channel と sync.WaitGroup を用いた worker pool の骨格を実装（worker 数は runtime.NumCPU() デフォルト、ScanOpts.Workers でオーバーライド可）
+- [x] internal/scanner/scanner.go — ScanOpts に Workers int フィールドを追加（0 なら NumCPU()）
 - [ ] internal/scanner/parallel.go — ディレクトリ 1 つを処理する workerFn: os.ReadDir で子を列挙 → ファイルは FileInfo に変換して結果 channel に送る / サブディレクトリはタスク channel に投入 / 除外・symlink スキップ・OneFileSystem・permission warning は既存 scanner.go と同じセマンティクスを保つ
 - [ ] internal/scanner/parallel.go — 結果集約: 別 goroutine で結果 channel から FileInfo を受け取り []FileInfo にまとめる。OnProgress コールバックもこの集約側から叩く（現状と同じ挙動を維持）
 - [ ] internal/scanner/parallel.go — タスクキューが空になり全 worker が idle になった時点で終了する仕組み（WaitGroup + close(taskCh) の順序に注意。deadlock しないこと）

@@ -15,6 +15,7 @@ type ScanOpts struct {
 	Exclude       []string
 	OnProgress    func(scanned int, currentDir string)
 	OneFileSystem bool
+	Workers       int
 }
 
 func deviceID(path string) (uint64, error) {
