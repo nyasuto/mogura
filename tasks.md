@@ -82,7 +82,7 @@
 - [x] internal/analyzer/analyze.go — Analyze(files []types.FileInfo, opts AnalyzeOpts) Result 関数。既存の各 analyzer を内部で呼び出して Result に詰める + テスト
 - [x] internal/app/app.go — Run 関数を Analyze 呼び出しに書き換え。個別の analyzer 呼び出しを削除
 - [x] internal/formatter/ — 各フォーマッタを Result を受け取る形に統一。FormatTable(Result, io.Writer), FormatJSON(Result, io.Writer), FormatTree(Result, io.Writer)
-- [ ] 旧 main.go 内の analyzer 個別呼び出しコードが完全に消えていることを確認。go vet + go test パス
+- [x] 旧 main.go 内の analyzer 個別呼び出しコードが完全に消えていることを確認。go vet + go test パス
  
 ### 5-C: 除外パターン（F2）
  
