@@ -76,36 +76,31 @@ func Run(cfg Config, stdout io.Writer, stderr io.Writer) error {
 		return err
 	}
 
-	var totalSize int64
-	for _, f := range files {
-		totalSize += f.Size
-	}
-
 	now := time.Now()
-	wasteDirs := analyzer.DetectWaste(files)
-	wasteDirs = append(wasteDirs, analyzer.DetectLargeGitDirs(files, 100*1024*1024)...)
-	staleResult := analyzer.DetectStale(files, cfg.OlderThanDays, now)
-	catStats := analyzer.AggregateByCategory(files)
+	result := analyzer.Analyze(files, analyzer.AnalyzeOpts{
+		TopN:          cfg.TopN,
+		Depth:         cfg.Depth,
+		OlderThanDays: cfg.OlderThanDays,
+		Now:           now,
+	})
 
 	var wasteTotal int64
-	for _, w := range wasteDirs {
+	for _, w := range result.WasteDirs {
 		wasteTotal += w.Size
 	}
-	savingsEstimate := wasteTotal + staleResult.TotalSize
+	savingsEstimate := wasteTotal + result.StaleSummary.TotalSize
 
 	switch cfg.OutputFormat {
 	case FormatJSON:
-		tree := analyzer.BuildTree(files)
-		tree = analyzer.Prune(tree, cfg.Depth)
 		report := formatter.Report{
-			TotalSize:       totalSize,
+			TotalSize:       result.TotalSize,
 			ScannedAt:       now,
-			DirTree:         tree,
-			Extensions:      analyzer.AggregateByExt(files),
-			Categories:      catStats,
-			LargestFiles:    analyzer.TopNFiles(files, cfg.TopN),
-			WasteDirs:       wasteDirs,
-			StaleSummary:    &formatter.StaleSummary{TotalSize: staleResult.TotalSize, TotalFiles: staleResult.TotalFiles, DaysThreshold: cfg.OlderThanDays},
+			DirTree:         result.DirTree,
+			Extensions:      result.ExtStats,
+			Categories:      result.CategoryStats,
+			LargestFiles:    result.TopFiles,
+			WasteDirs:       result.WasteDirs,
+			StaleSummary:    &formatter.StaleSummary{TotalSize: result.StaleSummary.TotalSize, TotalFiles: result.StaleSummary.TotalFiles, DaysThreshold: cfg.OlderThanDays},
 			SavingsEstimate: savingsEstimate,
 		}
 		out, err := formatter.RenderJSON(report)
@@ -115,38 +110,33 @@ func Run(cfg Config, stdout io.Writer, stderr io.Writer) error {
 		fmt.Fprintln(stdout, out)
 
 	case FormatTree:
-		tree := analyzer.BuildTree(files)
-		tree = analyzer.Prune(tree, cfg.Depth)
-		fmt.Fprint(stdout, formatter.RenderTree(tree))
+		fmt.Fprint(stdout, formatter.RenderTree(result.DirTree))
 
 	default:
-		fmt.Fprintf(stdout, "Total: %s (%d files)\n\n", internal.FormatSize(totalSize), len(files))
+		fmt.Fprintf(stdout, "Total: %s (%d files)\n\n", internal.FormatSize(result.TotalSize), len(files))
 
 		fmt.Fprintln(stdout, "=== ディレクトリ別 Top 10 ===")
-		dirSizes := analyzer.AggregateByDir(files)
-		formatter.PrintDirTable(stdout, dirSizes, 10)
+		formatter.PrintDirTable(stdout, result.DirSizes, 10)
 
 		fmt.Fprintln(stdout)
 		fmt.Fprintln(stdout, "=== 拡張子別 Top 10 ===")
-		extStats := analyzer.AggregateByExt(files)
-		formatter.PrintExtTable(stdout, extStats, 10)
+		formatter.PrintExtTable(stdout, result.ExtStats, 10)
 
 		fmt.Fprintln(stdout)
 		fmt.Fprintln(stdout, "=== カテゴリ別内訳 ===")
-		formatter.PrintCategoryTable(stdout, catStats)
+		formatter.PrintCategoryTable(stdout, result.CategoryStats)
 
 		fmt.Fprintln(stdout)
 		fmt.Fprintf(stdout, "=== 巨大ファイル Top %d ===\n", cfg.TopN)
-		topFiles := analyzer.TopNFiles(files, cfg.TopN)
-		formatter.PrintTopFiles(stdout, topFiles)
+		formatter.PrintTopFiles(stdout, result.TopFiles)
 
 		fmt.Fprintln(stdout)
 		fmt.Fprintln(stdout, "=== サマリ ===")
 		summary := formatter.RenderSummary(formatter.SummaryInput{
-			TotalSize:  totalSize,
-			Categories: catStats,
-			WasteDirs:  wasteDirs,
-			Stale:      staleResult,
+			TotalSize:  result.TotalSize,
+			Categories: result.CategoryStats,
+			WasteDirs:  result.WasteDirs,
+			Stale:      result.StaleSummary,
 		})
 		fmt.Fprint(stdout, summary)
 	}
