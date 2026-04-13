@@ -3,12 +3,19 @@ package formatter
 import (
 	"fmt"
 	"io"
+	"regexp"
 	"sort"
 	"strings"
 
 	"mogura/internal"
 	"mogura/internal/analyzer"
 )
+
+var ansiRe = regexp.MustCompile(`\033\[[0-9;]*m`)
+
+func displayWidth(s string) int {
+	return len(ansiRe.ReplaceAllString(s, ""))
+}
 
 type Row []string
 
@@ -27,14 +34,14 @@ func (t *Table) Render() string {
 
 	widths := make([]int, cols)
 	for i, h := range t.Header {
-		if len(h) > widths[i] {
-			widths[i] = len(h)
+		if dw := displayWidth(h); dw > widths[i] {
+			widths[i] = dw
 		}
 	}
 	for _, row := range t.Rows {
 		for i := 0; i < cols && i < len(row); i++ {
-			if len(row[i]) > widths[i] {
-				widths[i] = len(row[i])
+			if dw := displayWidth(row[i]); dw > widths[i] {
+				widths[i] = dw
 			}
 		}
 	}
@@ -50,10 +57,17 @@ func (t *Table) Render() string {
 			if i < len(row) {
 				val = row[i]
 			}
+			dw := displayWidth(val)
+			pad := widths[i] - dw
+			if pad < 0 {
+				pad = 0
+			}
 			if i < len(t.RightAlign) && t.RightAlign[i] {
-				b.WriteString(fmt.Sprintf("%*s", widths[i], val))
+				b.WriteString(strings.Repeat(" ", pad))
+				b.WriteString(val)
 			} else {
-				b.WriteString(fmt.Sprintf("%-*s", widths[i], val))
+				b.WriteString(val)
+				b.WriteString(strings.Repeat(" ", pad))
 			}
 		}
 		b.WriteByte('\n')
@@ -196,6 +210,42 @@ func FormatTable(result analyzer.Result, w io.Writer) {
 		Stale:      result.StaleSummary,
 	})
 	fmt.Fprint(w, summary)
+}
+
+const (
+	colorRed   = "\033[31m"
+	colorGreen = "\033[32m"
+	colorReset = "\033[0m"
+)
+
+func formatDelta(delta int64) string {
+	if delta > 0 {
+		return colorRed + "+" + internal.FormatSize(delta) + colorReset
+	}
+	if delta < 0 {
+		return colorGreen + "-" + internal.FormatSize(-delta) + colorReset
+	}
+	return "0 B"
+}
+
+func FormatDiffTable(diffs []analyzer.DirDiff, w io.Writer, limit int) {
+	if limit > 0 && len(diffs) > limit {
+		diffs = diffs[:limit]
+	}
+
+	tbl := Table{
+		Header:     Row{"Path", "Prev", "Curr", "Delta"},
+		RightAlign: []bool{false, true, true, true},
+	}
+	for _, d := range diffs {
+		tbl.Rows = append(tbl.Rows, Row{
+			d.Path,
+			internal.FormatSize(d.PrevSize),
+			internal.FormatSize(d.CurrSize),
+			formatDelta(d.Delta),
+		})
+	}
+	fmt.Fprint(w, tbl.Render())
 }
 
 func PrintTopFiles(w io.Writer, files []internal.FileInfo) {
