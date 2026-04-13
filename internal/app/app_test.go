@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -89,6 +90,28 @@ func TestRun_TreeOutput(t *testing.T) {
 	}
 }
 
+func TestRun_WithExclude(t *testing.T) {
+	dir := setupTmpDir(t)
+	cfg := Config{
+		TargetPath:    dir,
+		TopN:          5,
+		Depth:         3,
+		OutputFormat:  FormatText,
+		Exclude:       []string{"subdir"},
+		OlderThanDays: 365,
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := Run(cfg, &stdout, &stderr); err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+
+	output := stdout.String()
+	if strings.Contains(output, "data.csv") || strings.Contains(output, "image.png") {
+		t.Error("expected subdir files to be excluded from output")
+	}
+}
+
 func TestRun_InvalidPath(t *testing.T) {
 	cfg := Config{
 		TargetPath:    "/nonexistent/path/that/does/not/exist",
@@ -146,6 +169,18 @@ func TestParseFlags(t *testing.T) {
 			},
 		},
 		{
+			name: "exclude flag",
+			args: []string{"--exclude", "node_modules,.git,*.tmp", "/tmp"},
+			want: Config{
+				TargetPath:    "/tmp",
+				TopN:          20,
+				Depth:         3,
+				OutputFormat:  FormatText,
+				Exclude:       []string{"node_modules", ".git", "*.tmp"},
+				OlderThanDays: 365,
+			},
+		},
+		{
 			name:    "no path",
 			args:    []string{},
 			wantErr: true,
@@ -178,6 +213,15 @@ func TestParseFlags(t *testing.T) {
 			}
 			if got.OlderThanDays != tt.want.OlderThanDays {
 				t.Errorf("OlderThanDays = %d, want %d", got.OlderThanDays, tt.want.OlderThanDays)
+			}
+			if len(got.Exclude) != len(tt.want.Exclude) {
+				t.Errorf("Exclude len = %d, want %d", len(got.Exclude), len(tt.want.Exclude))
+			} else {
+				for i := range got.Exclude {
+					if got.Exclude[i] != tt.want.Exclude[i] {
+						t.Errorf("Exclude[%d] = %q, want %q", i, got.Exclude[i], tt.want.Exclude[i])
+					}
+				}
 			}
 		})
 	}

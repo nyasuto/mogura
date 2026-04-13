@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"mogura/internal/analyzer"
@@ -37,6 +38,7 @@ func ParseFlags(args []string) (Config, error) {
 	depth := fs.Int("depth", 3, "ツリー表示の深さ")
 	top := fs.Int("top", 20, "巨大ファイル表示件数")
 	olderThan := fs.Int("older-than", 365, "古いファイルの判定日数")
+	exclude := fs.String("exclude", "", "除外パターン（カンマ区切り: node_modules,.git,*.tmp）")
 
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "usage: mogura [flags] <path>\n")
@@ -60,17 +62,29 @@ func ParseFlags(args []string) (Config, error) {
 		format = FormatTree
 	}
 
+	var excludes []string
+	if *exclude != "" {
+		for _, e := range strings.Split(*exclude, ",") {
+			if t := strings.TrimSpace(e); t != "" {
+				excludes = append(excludes, t)
+			}
+		}
+	}
+
 	return Config{
 		TargetPath:    fs.Arg(0),
 		TopN:          *top,
 		Depth:         *depth,
 		OutputFormat:  format,
+		Exclude:       excludes,
 		OlderThanDays: *olderThan,
 	}, nil
 }
 
 func Run(cfg Config, stdout io.Writer, stderr io.Writer) error {
-	files, err := scanner.Scan(cfg.TargetPath)
+	files, err := scanner.Scan(cfg.TargetPath, scanner.ScanOpts{
+		Exclude: cfg.Exclude,
+	})
 	if err != nil {
 		return err
 	}
