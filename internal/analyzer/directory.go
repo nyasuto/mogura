@@ -2,10 +2,18 @@ package analyzer
 
 import "mogura/internal"
 
-func AggregateByDir(files []internal.FileInfo) map[string]int64 {
-	result := make(map[string]int64)
+type DirSizeInfo struct {
+	Size         int64 `json:"size"`
+	PhysicalSize int64 `json:"physical_size"`
+}
+
+func AggregateByDir(files []internal.FileInfo) map[string]DirSizeInfo {
+	result := make(map[string]DirSizeInfo)
 	for _, f := range files {
-		result[f.Dir] += f.Size
+		info := result[f.Dir]
+		info.Size += f.Size
+		info.PhysicalSize += f.PhysicalSize
+		result[f.Dir] = info
 	}
 	return result
 }

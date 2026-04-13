@@ -15,9 +15,9 @@ func TestFormatHTML_containsData(t *testing.T) {
 		TotalSize: 1024000,
 		FileCount: 15,
 		ScannedAt: time.Date(2026, 1, 15, 10, 30, 0, 0, time.UTC),
-		DirSizes: map[string]int64{
-			"/root/src":  512000,
-			"/root/docs": 512000,
+		DirSizes: map[string]analyzer.DirSizeInfo{
+			"/root/src":  {Size: 512000, PhysicalSize: 512000},
+			"/root/docs": {Size: 512000, PhysicalSize: 512000},
 		},
 		ExtStats: map[string]analyzer.ExtStats{
 			".go": {Size: 512000, Count: 10},

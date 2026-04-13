@@ -99,10 +99,10 @@ type DirEntry struct {
 	Size int64
 }
 
-func PrintDirTable(w io.Writer, dirSizes map[string]int64, limit int) {
+func PrintDirTable(w io.Writer, dirSizes map[string]analyzer.DirSizeInfo, limit int) {
 	entries := make([]DirEntry, 0, len(dirSizes))
-	for path, size := range dirSizes {
-		entries = append(entries, DirEntry{Path: path, Size: size})
+	for path, info := range dirSizes {
+		entries = append(entries, DirEntry{Path: path, Size: info.Size})
 	}
 
 	sort.Slice(entries, func(i, j int) bool {

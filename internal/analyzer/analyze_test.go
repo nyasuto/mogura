@@ -39,11 +39,17 @@ func TestAnalyze(t *testing.T) {
 	})
 
 	t.Run("DirSizes", func(t *testing.T) {
-		if result.DirSizes["/app"] != 1500 {
-			t.Errorf("DirSizes[/app] = %d, want 1500", result.DirSizes["/app"])
+		if result.DirSizes["/app"].Size != 1500 {
+			t.Errorf("DirSizes[/app].Size = %d, want 1500", result.DirSizes["/app"].Size)
 		}
-		if result.DirSizes["/app/img"] != 5000 {
-			t.Errorf("DirSizes[/app/img] = %d, want 5000", result.DirSizes["/app/img"])
+		if result.DirSizes["/app"].PhysicalSize != 1500 {
+			t.Errorf("DirSizes[/app].PhysicalSize = %d, want 1500", result.DirSizes["/app"].PhysicalSize)
+		}
+		if result.DirSizes["/app/img"].Size != 5000 {
+			t.Errorf("DirSizes[/app/img].Size = %d, want 5000", result.DirSizes["/app/img"].Size)
+		}
+		if result.DirSizes["/app/img"].PhysicalSize != 4096 {
+			t.Errorf("DirSizes[/app/img].PhysicalSize = %d, want 4096", result.DirSizes["/app/img"].PhysicalSize)
 		}
 	})
 

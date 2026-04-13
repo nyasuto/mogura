@@ -169,7 +169,7 @@ func TestBuildReport_DiffSummary(t *testing.T) {
 	result := analyzer.Result{
 		TotalSize:     1000,
 		ScannedAt:     time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
-		DirSizes:      map[string]int64{"/root": 1000},
+		DirSizes:      map[string]analyzer.DirSizeInfo{"/root": {Size: 1000}},
 		ExtStats:      map[string]analyzer.ExtStats{},
 		CategoryStats: map[analyzer.Category]analyzer.CategoryStats{},
 		DiffSummary: []analyzer.DirDiff{
@@ -190,7 +190,7 @@ func TestFormatJSON_DiffSummaryOmitted(t *testing.T) {
 	result := analyzer.Result{
 		TotalSize:     500,
 		ScannedAt:     time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
-		DirSizes:      map[string]int64{"/root": 500},
+		DirSizes:      map[string]analyzer.DirSizeInfo{"/root": {Size: 500}},
 		ExtStats:      map[string]analyzer.ExtStats{},
 		CategoryStats: map[analyzer.Category]analyzer.CategoryStats{},
 	}

@@ -98,62 +98,62 @@ func TestLoadPrevResult(t *testing.T) {
 func TestComputeDiff(t *testing.T) {
 	tests := []struct {
 		name      string
-		prev      map[string]int64
-		curr      map[string]int64
+		prev      map[string]DirSizeInfo
+		curr      map[string]DirSizeInfo
 		wantCount int
 		wantFirst DirDiff
 		wantLast  DirDiff
 	}{
 		{
 			name:      "directory grew",
-			prev:      map[string]int64{"/home": 1000},
-			curr:      map[string]int64{"/home": 3000},
+			prev:      map[string]DirSizeInfo{"/home": {Size: 1000}},
+			curr:      map[string]DirSizeInfo{"/home": {Size: 3000}},
 			wantCount: 1,
 			wantFirst: DirDiff{Path: "/home", PrevSize: 1000, CurrSize: 3000, Delta: 2000},
 			wantLast:  DirDiff{Path: "/home", PrevSize: 1000, CurrSize: 3000, Delta: 2000},
 		},
 		{
 			name:      "directory shrank",
-			prev:      map[string]int64{"/tmp": 5000},
-			curr:      map[string]int64{"/tmp": 2000},
+			prev:      map[string]DirSizeInfo{"/tmp": {Size: 5000}},
+			curr:      map[string]DirSizeInfo{"/tmp": {Size: 2000}},
 			wantCount: 1,
 			wantFirst: DirDiff{Path: "/tmp", PrevSize: 5000, CurrSize: 2000, Delta: -3000},
 			wantLast:  DirDiff{Path: "/tmp", PrevSize: 5000, CurrSize: 2000, Delta: -3000},
 		},
 		{
 			name:      "new directory",
-			prev:      map[string]int64{},
-			curr:      map[string]int64{"/new": 1000},
+			prev:      map[string]DirSizeInfo{},
+			curr:      map[string]DirSizeInfo{"/new": {Size: 1000}},
 			wantCount: 1,
 			wantFirst: DirDiff{Path: "/new", PrevSize: 0, CurrSize: 1000, Delta: 1000},
 			wantLast:  DirDiff{Path: "/new", PrevSize: 0, CurrSize: 1000, Delta: 1000},
 		},
 		{
 			name:      "deleted directory",
-			prev:      map[string]int64{"/old": 2000},
-			curr:      map[string]int64{},
+			prev:      map[string]DirSizeInfo{"/old": {Size: 2000}},
+			curr:      map[string]DirSizeInfo{},
 			wantCount: 1,
 			wantFirst: DirDiff{Path: "/old", PrevSize: 2000, CurrSize: 0, Delta: -2000},
 			wantLast:  DirDiff{Path: "/old", PrevSize: 2000, CurrSize: 0, Delta: -2000},
 		},
 		{
 			name:      "mixed changes sorted by delta desc",
-			prev:      map[string]int64{"/a": 1000, "/b": 5000},
-			curr:      map[string]int64{"/a": 4000, "/b": 2000, "/d": 500},
+			prev:      map[string]DirSizeInfo{"/a": {Size: 1000}, "/b": {Size: 5000}},
+			curr:      map[string]DirSizeInfo{"/a": {Size: 4000}, "/b": {Size: 2000}, "/d": {Size: 500}},
 			wantCount: 3,
 			wantFirst: DirDiff{Path: "/a", PrevSize: 1000, CurrSize: 4000, Delta: 3000},
 			wantLast:  DirDiff{Path: "/b", PrevSize: 5000, CurrSize: 2000, Delta: -3000},
 		},
 		{
 			name:      "both empty",
-			prev:      map[string]int64{},
-			curr:      map[string]int64{},
+			prev:      map[string]DirSizeInfo{},
+			curr:      map[string]DirSizeInfo{},
 			wantCount: 0,
 		},
 		{
 			name:      "no change",
-			prev:      map[string]int64{"/same": 1000},
-			curr:      map[string]int64{"/same": 1000},
+			prev:      map[string]DirSizeInfo{"/same": {Size: 1000}},
+			curr:      map[string]DirSizeInfo{"/same": {Size: 1000}},
 			wantCount: 1,
 			wantFirst: DirDiff{Path: "/same", PrevSize: 1000, CurrSize: 1000, Delta: 0},
 			wantLast:  DirDiff{Path: "/same", PrevSize: 1000, CurrSize: 1000, Delta: 0},

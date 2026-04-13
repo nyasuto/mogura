@@ -174,7 +174,7 @@
 ### 9-B: 集計への反映
 
 - [x] internal/analyzer/result.go — Result に TotalPhysicalSize int64 を追加
-- [ ] internal/analyzer/directory.go — AggregateByDir を `map[string]struct{Size,Physical int64}` に変更（or 並列 map を追加）+ テスト更新
+- [x] internal/analyzer/directory.go — AggregateByDir を `map[string]struct{Size,Physical int64}` に変更（or 並列 map を追加）+ テスト更新
 - [ ] internal/analyzer/extension.go / category.go — ExtStats / CategoryStats に PhysicalSize を追加 + テスト更新
 - [ ] internal/analyzer/topn.go — 巨大ファイル Top は論理サイズで並べたうえで物理サイズも保持（並び順は現行維持）
 - [ ] internal/analyzer/tree.go — DirNode に PhysicalSize を追加し BuildTree / Prune で積み上げ + テスト

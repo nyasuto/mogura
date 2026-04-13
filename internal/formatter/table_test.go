@@ -79,9 +79,9 @@ func TestRender(t *testing.T) {
 }
 
 func TestPrintDirTableHasBar(t *testing.T) {
-	dirSizes := map[string]int64{
-		"/big":   2000,
-		"/small": 1000,
+	dirSizes := map[string]analyzer.DirSizeInfo{
+		"/big":   {Size: 2000, PhysicalSize: 2000},
+		"/small": {Size: 1000, PhysicalSize: 1000},
 	}
 	var buf bytes.Buffer
 	PrintDirTable(&buf, dirSizes, 10)

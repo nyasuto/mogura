@@ -36,26 +36,26 @@ func ComputeDiff(prev, curr Result) []DirDiff {
 	seen := make(map[string]bool)
 	var diffs []DirDiff
 
-	for path, currSize := range curr.DirSizes {
+	for path, currInfo := range curr.DirSizes {
 		seen[path] = true
-		prevSize := prev.DirSizes[path]
+		prevInfo := prev.DirSizes[path]
 		diffs = append(diffs, DirDiff{
 			Path:     path,
-			PrevSize: prevSize,
-			CurrSize: currSize,
-			Delta:    currSize - prevSize,
+			PrevSize: prevInfo.Size,
+			CurrSize: currInfo.Size,
+			Delta:    currInfo.Size - prevInfo.Size,
 		})
 	}
 
-	for path, prevSize := range prev.DirSizes {
+	for path, prevInfo := range prev.DirSizes {
 		if seen[path] {
 			continue
 		}
 		diffs = append(diffs, DirDiff{
 			Path:     path,
-			PrevSize: prevSize,
+			PrevSize: prevInfo.Size,
 			CurrSize: 0,
-			Delta:    -prevSize,
+			Delta:    -prevInfo.Size,
 		})
 	}
 
