@@ -249,6 +249,57 @@ func TestBuildTreeDominantCategory(t *testing.T) {
 	}
 }
 
+func TestBuildTreePhysicalSize(t *testing.T) {
+	files := []internal.FileInfo{
+		{Path: "/a/x.txt", Size: 1000, PhysicalSize: 100, Dir: "/a"},
+		{Path: "/a/sub/y.txt", Size: 2000, PhysicalSize: 200, Dir: "/a/sub"},
+		{Path: "/a/sub/deep/z.txt", Size: 3000, PhysicalSize: 300, Dir: "/a/sub/deep"},
+	}
+
+	got := BuildTree(files)
+	if got.PhysicalSize != 600 {
+		t.Errorf("root PhysicalSize = %d, want 600", got.PhysicalSize)
+	}
+	if got.Size != 6000 {
+		t.Errorf("root Size = %d, want 6000", got.Size)
+	}
+
+	var sub DirNode
+	for _, c := range got.Children {
+		if c.Name == "sub" {
+			sub = c
+			break
+		}
+	}
+	if sub.PhysicalSize != 500 {
+		t.Errorf("sub PhysicalSize = %d, want 500", sub.PhysicalSize)
+	}
+}
+
+func TestPrunePhysicalSize(t *testing.T) {
+	tree := DirNode{
+		Name: "/root", Size: 1000, PhysicalSize: 500, FileCount: 3,
+		Children: []DirNode{
+			{Name: "a", Size: 600, PhysicalSize: 300, FileCount: 2,
+				Children: []DirNode{
+					{Name: "deep", Size: 400, PhysicalSize: 200, FileCount: 1},
+				},
+			},
+			{Name: "b", Size: 400, PhysicalSize: 200, FileCount: 1},
+		},
+	}
+
+	pruned := Prune(tree, 0)
+	if pruned.PhysicalSize != 500 {
+		t.Errorf("pruned PhysicalSize = %d, want 500", pruned.PhysicalSize)
+	}
+
+	pruned1 := Prune(tree, 1)
+	if pruned1.Children[0].PhysicalSize != 300 {
+		t.Errorf("pruned depth=1 child PhysicalSize = %d, want 300", pruned1.Children[0].PhysicalSize)
+	}
+}
+
 func TestBuildTreeSizeAggregation(t *testing.T) {
 	files := []internal.FileInfo{
 		{Path: "/a/x.txt", Size: 100, Dir: "/a"},

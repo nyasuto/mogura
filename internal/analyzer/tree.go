@@ -11,6 +11,7 @@ import (
 type DirNode struct {
 	Name             string    `json:"name"`
 	Size             int64     `json:"size"`
+	PhysicalSize     int64     `json:"physical_size"`
 	Children         []DirNode `json:"children,omitempty"`
 	FileCount        int       `json:"file_count"`
 	DominantCategory string    `json:"dominant_category"`
@@ -24,10 +25,11 @@ func BuildTree(files []internal.FileInfo) DirNode {
 	root := commonRoot(files)
 
 	type dirInfo struct {
-		size      int64
-		fileCount int
-		children  map[string]bool
-		catSizes  map[Category]int64
+		size         int64
+		physicalSize int64
+		fileCount    int
+		children     map[string]bool
+		catSizes     map[Category]int64
 	}
 
 	dirs := make(map[string]*dirInfo)
@@ -46,6 +48,7 @@ func BuildTree(files []internal.FileInfo) DirNode {
 	for _, f := range files {
 		d := ensureDir(f.Dir)
 		d.size += f.Size
+		d.physicalSize += f.PhysicalSize
 		d.fileCount++
 		cat := ClassifyExt(f.Ext)
 		d.catSizes[cat] += f.Size
@@ -68,14 +71,16 @@ func BuildTree(files []internal.FileInfo) DirNode {
 
 		d := dirs[path]
 		node := DirNode{
-			Name:      name,
-			Size:      d.size,
-			FileCount: d.fileCount,
+			Name:         name,
+			Size:         d.size,
+			PhysicalSize: d.physicalSize,
+			FileCount:    d.fileCount,
 		}
 
 		for child := range d.children {
 			childNode := build(child)
 			node.Size += childNode.Size
+			node.PhysicalSize += childNode.PhysicalSize
 			node.FileCount += childNode.FileCount
 			node.Children = append(node.Children, childNode)
 			for cat, sz := range dirs[child].catSizes {
@@ -108,6 +113,7 @@ func Prune(node DirNode, depth int) DirNode {
 		return DirNode{
 			Name:             node.Name,
 			Size:             node.Size,
+			PhysicalSize:     node.PhysicalSize,
 			FileCount:        node.FileCount,
 			DominantCategory: node.DominantCategory,
 		}
@@ -115,6 +121,7 @@ func Prune(node DirNode, depth int) DirNode {
 	pruned := DirNode{
 		Name:             node.Name,
 		Size:             node.Size,
+		PhysicalSize:     node.PhysicalSize,
 		FileCount:        node.FileCount,
 		DominantCategory: node.DominantCategory,
 	}

@@ -177,7 +177,7 @@
 - [x] internal/analyzer/directory.go — AggregateByDir を `map[string]struct{Size,Physical int64}` に変更（or 並列 map を追加）+ テスト更新
 - [x] internal/analyzer/extension.go / category.go — ExtStats / CategoryStats に PhysicalSize を追加 + テスト更新
 - [x] internal/analyzer/topn.go — 巨大ファイル Top は論理サイズで並べたうえで物理サイズも保持（並び順は現行維持）
-- [ ] internal/analyzer/tree.go — DirNode に PhysicalSize を追加し BuildTree / Prune で積み上げ + テスト
+- [x] internal/analyzer/tree.go — DirNode に PhysicalSize を追加し BuildTree / Prune で積み上げ + テスト
 - [ ] internal/analyzer/stale.go / waste.go — StaleResult / WasteDir にも PhysicalSize を追加
 - [ ] internal/analyzer/analyze.go — Analyze 内で各集計を新フィールドで埋める。SavingsEstimate 相当は物理サイズベースで計算する
 
@@ -198,6 +198,41 @@
 
 - [ ] `./mogura ~` を実行し、Docker.raw の物理サイズが `du -sh` と一致することを確認
 - [ ] `./mogura -diff` が既存の JSON スナップショット（physical_size フィールド無し）を読み込んでも壊れないことを確認（後方互換）
+
+
+## Phase 10: 高速化（並列 walk + OS 最適化 syscall）
+
+> リサーチ結果: 同種ツール（gdu, dust, DaisyDisk 等）が速く見える正体は「キャッシュ」ではなく「並列 walk + OS ネイティブな一括 stat 取得」だった。mtime 増分キャッシュは POSIX の mtime 伝播ルール（孫以下の変更は親に伝播しない）により素朴実装ではサイレントに古い結果を返すため採用しない。まず D 案（並列 + getattrlistbulk）で初回スキャンを 5〜10 倍速くする。
+
+### 10-A: 並列 walk（依存ゼロ）
+
+> `filepath.WalkDir` は単一 goroutine でディレクトリを順次走査するためディスク I/O 待ちがボトルネック。worker pool + ディレクトリタスクキューに書き換え、SSD で 3〜5 倍の高速化を狙う。scanner 内部の差し替えだけで済み、外部依存は増えない。
+
+- [ ] internal/scanner/parallel.go — 新ファイルを作成。ディレクトリタスク用 channel と sync.WaitGroup を用いた worker pool の骨格を実装（worker 数は runtime.NumCPU() デフォルト、ScanOpts.Workers でオーバーライド可）
+- [ ] internal/scanner/scanner.go — ScanOpts に Workers int フィールドを追加（0 なら NumCPU()）
+- [ ] internal/scanner/parallel.go — ディレクトリ 1 つを処理する workerFn: os.ReadDir で子を列挙 → ファイルは FileInfo に変換して結果 channel に送る / サブディレクトリはタスク channel に投入 / 除外・symlink スキップ・OneFileSystem・permission warning は既存 scanner.go と同じセマンティクスを保つ
+- [ ] internal/scanner/parallel.go — 結果集約: 別 goroutine で結果 channel から FileInfo を受け取り []FileInfo にまとめる。OnProgress コールバックもこの集約側から叩く（現状と同じ挙動を維持）
+- [ ] internal/scanner/parallel.go — タスクキューが空になり全 worker が idle になった時点で終了する仕組み（WaitGroup + close(taskCh) の順序に注意。deadlock しないこと）
+- [ ] internal/scanner/scanner.go — Scan 関数を並列実装に差し替え。既存の逐次実装は削除（Git 履歴に残る）
+- [ ] internal/scanner/parallel_test.go — 並列版でも既存 scanner_test.go のテスト（exclude、symlink、permission、OneFileSystem、PhysicalSize 等）が全てパスすること。map 順非依存の検証を追加
+- [ ] internal/scanner/parallel_test.go — 並列性テスト: 数千ファイルを含む一時ツリーを作り、Workers=1 と Workers=8 で同一結果になることを確認
+- [ ] bench_test.go（プロジェクトルート or scanner 配下）— 大規模ディレクトリ用のベンチマーク。`go test -bench` で逐次版 vs 並列版のスループットを測れるようにする。CI では走らせず手動実行でよい
+- [ ] 実機ベンチ: `./mogura ~` を 3 回実行し、逐次版との差を README に記録（ミニマムな数値報告でよい）
+- [ ] README.md に並列スキャンの説明と `-workers` フラグ（internal/app/app.go 側も併せて追加）を追記
+
+### 10-B: getattrlistbulk（darwin 専用の一括 stat）
+
+> `getattrlistbulk(2)` は 1 syscall で 1 ディレクトリ内の全エントリの stat を返す macOS 10.10+ の API。readdir + lstat ループに比べ syscall 数が 1/N になり、APFS で 3〜8 倍の高速化が期待できる。Linux は将来 10-C として statx + getdents64 で同等のことをやる（本 Phase ではやらない）。**外部依存ポリシー要判断**: `golang.org/x/sys/unix` を導入するか、`syscall.Syscall6` で直接叩くか、Phase 10-B 着手時点で決める。
+
+- [ ] **方針決定タスク**: `golang.org/x/sys` を外部依存として許容するか、`syscall.Syscall6` + `unsafe.Pointer` で直接 ABI を叩くかを決める。CLAUDE.md の「外部依存ゼロ」方針の扱いも同時に再確認（OS 特化の syscall ラッパは事実上の標準扱いにするのが現実的。判断を CLAUDE.md に追記）
+- [ ] internal/scanner/bulkstat_darwin.go — darwin build tag (`//go:build darwin`) で getattrlistbulk ラッパを実装。`struct attrlist` / `ATTR_BIT_MAP_COUNT` / `ATTR_CMN_NAME` / `ATTR_CMN_OBJTYPE` / `ATTR_CMN_MODTIME` / `ATTR_FILE_TOTALSIZE` / `ATTR_FILE_ALLOCSIZE`（= 物理サイズ、Phase 9 と連携）を取得
+- [ ] internal/scanner/bulkstat_darwin.go — readDirBulk(path string) ([]bulkEntry, error) 関数として公開。1 回の呼び出しで 1 バッファ分（通常 64〜256 エントリ）、eof まで繰り返し呼ぶ。属性バッファのパース（可変長レコードのため offset 計算に注意）をユニットテストでカバー
+- [ ] internal/scanner/bulkstat_other.go — darwin 以外の build tag (`//go:build !darwin`) で readDirBulk をスタブ実装（`os.ReadDir` + `os.Lstat` にフォールバック）。型とシグネチャを darwin 版と揃える
+- [ ] internal/scanner/parallel.go — workerFn を readDirBulk ベースに書き換え。darwin では 1 syscall で済み、他 OS では従来どおり os.ReadDir + Lstat
+- [ ] internal/scanner/bulkstat_darwin_test.go — darwin 限定テスト（build tag で制限）。一時ディレクトリに各種ファイル（regular / dir / symlink / スパース）を作り、readDirBulk の結果が Lstat と一致することを検証
+- [ ] 実機ベンチ: Phase 10-A 単独版 vs 10-A + 10-B darwin 版で `~/Library` のスキャン時間を比較。README に結果記録
+- [ ] フォールバック検証: darwin でも `-bulkstat=false` フラグ（あるいは内部切替）で従来経路に戻せることを確認。何か問題が出た時の脱出口として残す
+- [ ] CLAUDE.md 更新: 「外部依存ゼロ」の例外として `golang.org/x/sys` を明示（方針決定タスクの結果次第）
 
 
 ---
