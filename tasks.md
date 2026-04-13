@@ -96,7 +96,7 @@
 ### 6-A: HTML テンプレート基盤
  
 - [x] internal/formatter/html.go — FormatHTML(Result, io.Writer) error のシグネチャと空実装
-- [ ] internal/formatter/templates/ ディレクトリ作成。report.html テンプレートの骨格を作成（html/template 用）。D3.js は cdnjs から読み込む script タグ
+- [x] internal/formatter/templates/ ディレクトリ作成。report.html テンプレートの骨格を作成（html/template 用）。D3.js は cdnjs から読み込む script タグ
 - [ ] internal/formatter/html.go — go:embed で templates/report.html を埋め込み。Result の JSON を `<script>const data = {{.}}</script>` としてテンプレートに注入
 - [ ] internal/formatter/html.go — テスト。Result のモックデータで HTML を生成し、`const data =` が含まれることを確認
  
