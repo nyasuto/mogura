@@ -86,7 +86,7 @@
  
 ### 5-C: 除外パターン（F2）
  
-- [ ] internal/scanner/scanner.go — ScanOpts 型に Exclude []string フィールドを追加。Walk 時にパスがパターンに一致したらスキップ + テスト
+- [x] internal/scanner/scanner.go — ScanOpts 型に Exclude []string フィールドを追加。Walk 時にパスがパターンに一致したらスキップ + テスト
 - [ ] パターンマッチの仕様決定: ディレクトリ名の完全一致（`node_modules`）とグロブ（`*.tmp`）の両方を対応 + テスト
 - [ ] internal/app/app.go — Config.Exclude を ScanOpts に渡す配線。`-exclude 'node_modules,.git,*.tmp'` をカンマ区切りでパース
 - [ ] README.md に `-exclude` の使い方を追記

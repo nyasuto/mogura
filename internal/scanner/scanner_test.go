@@ -124,6 +124,60 @@ func TestScanPermissionError(t *testing.T) {
 	}
 }
 
+func TestScanExclude(t *testing.T) {
+	base := t.TempDir()
+
+	dirs := []string{
+		filepath.Join(base, "src"),
+		filepath.Join(base, "node_modules"),
+		filepath.Join(base, "node_modules", "pkg"),
+		filepath.Join(base, ".cache"),
+	}
+	for _, d := range dirs {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	fileMap := map[string]string{
+		filepath.Join(base, "src", "main.go"):              "package main",
+		filepath.Join(base, "node_modules", "pkg", "a.js"): "module.exports={}",
+		filepath.Join(base, ".cache", "data.bin"):          "cached",
+	}
+	for p, content := range fileMap {
+		if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	tests := []struct {
+		name      string
+		exclude   []string
+		wantFiles int
+	}{
+		{"no exclude", nil, 3},
+		{"exclude node_modules", []string{"node_modules"}, 2},
+		{"exclude multiple", []string{"node_modules", ".cache"}, 1},
+		{"exclude nonexistent", []string{"vendor"}, 3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			files, err := Scan(base, ScanOpts{Exclude: tt.exclude})
+			if err != nil {
+				t.Fatalf("Scan() error: %v", err)
+			}
+			if len(files) != tt.wantFiles {
+				names := make([]string, len(files))
+				for i, f := range files {
+					names[i] = f.Path
+				}
+				t.Errorf("expected %d files, got %d: %v", tt.wantFiles, len(files), names)
+			}
+		})
+	}
+}
+
 func TestScanNonExistent(t *testing.T) {
 	_, err := Scan("/nonexistent/path/that/does/not/exist")
 	if err == nil {

@@ -10,7 +10,11 @@ import (
 	"mogura/internal"
 )
 
-func Scan(root string) ([]internal.FileInfo, error) {
+type ScanOpts struct {
+	Exclude []string
+}
+
+func Scan(root string, opts ...ScanOpts) ([]internal.FileInfo, error) {
 	root, err := filepath.Abs(root)
 	if err != nil {
 		return nil, err
@@ -18,6 +22,16 @@ func Scan(root string) ([]internal.FileInfo, error) {
 
 	if _, err := os.Lstat(root); err != nil {
 		return nil, err
+	}
+
+	var opt ScanOpts
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
+
+	excludeSet := make(map[string]bool, len(opt.Exclude))
+	for _, e := range opt.Exclude {
+		excludeSet[e] = true
 	}
 
 	var files []internal.FileInfo
@@ -33,6 +47,9 @@ func Scan(root string) ([]internal.FileInfo, error) {
 		}
 
 		if d.IsDir() {
+			if path != root && excludeSet[d.Name()] {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 
