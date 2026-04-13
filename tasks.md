@@ -159,8 +159,47 @@
  
 - [x] internal/scanner/scanner.go — ScanOpts に OneFileSystem bool を追加。Walk 時にデバイス ID が変わったらスキップ（syscall.Stat_t.Dev を比較） + テスト
 - [x] flags — `-x` フラグの追加
- 
- 
+
+
+## Phase 9: スパースファイル対応（F0 — 実証済みの最重要課題）
+
+> 実スキャンで `~/.colima/_lima/.../diffdisk` が論理 100 GB / 実物理 9.2 GB、`Docker.raw` も論理 926 GB で同様の乖離が判明。現状の mogura は `stat.Size` しか見ていないため「推定節約可能量」が実態と大幅に乖離する。`stat.Blocks * 512` で物理サイズを取得し、両軸で可視化する。
+
+### 9-A: 物理サイズの取得
+
+- [x] internal/types.go — FileInfo に PhysicalSize int64 フィールドを追加。JSON タグは `physical_size`（既存 `size` は論理サイズのまま据え置き = 後方互換）
+- [ ] internal/scanner/scanner.go — darwin / linux 用に syscall.Stat_t.Blocks を読み取って PhysicalSize に詰める実装。既存の Lstat 取得経路に統合（重複 stat は避ける）+ テスト
+- [ ] internal/scanner/scanner_test.go — `os.Truncate` で巨大論理サイズのスパースファイルを一時生成し、PhysicalSize << Size になることを検証するテストケース
+
+### 9-B: 集計への反映
+
+- [ ] internal/analyzer/result.go — Result に TotalPhysicalSize int64 を追加
+- [ ] internal/analyzer/directory.go — AggregateByDir を `map[string]struct{Size,Physical int64}` に変更（or 並列 map を追加）+ テスト更新
+- [ ] internal/analyzer/extension.go / category.go — ExtStats / CategoryStats に PhysicalSize を追加 + テスト更新
+- [ ] internal/analyzer/topn.go — 巨大ファイル Top は論理サイズで並べたうえで物理サイズも保持（並び順は現行維持）
+- [ ] internal/analyzer/tree.go — DirNode に PhysicalSize を追加し BuildTree / Prune で積み上げ + テスト
+- [ ] internal/analyzer/stale.go / waste.go — StaleResult / WasteDir にも PhysicalSize を追加
+- [ ] internal/analyzer/analyze.go — Analyze 内で各集計を新フィールドで埋める。SavingsEstimate 相当は物理サイズベースで計算する
+
+### 9-C: 表示への反映
+
+- [ ] internal/formatter/table.go — 論理サイズと物理サイズの乖離が 10% 以上の場合のみ、サイズ列に `926.4 GB (実 43.2 GB)` 形式で括弧表示 + テスト。乖離が小さい行は従来どおり単一値
+- [ ] internal/formatter/summary.go — 推定節約可能量を物理サイズで計算するように変更。論理サイズとの差を「スパース節約のまやかし」として注記
+- [ ] internal/formatter/templates/report.html — treemap / 巨大ファイル Top で「論理 / 物理」切替トグルを追加。デフォルトは論理（見た目の支配度を保つ）、物理に切り替えると実占有ベースの矩形サイズ / 並びになる
+- [ ] internal/formatter/json.go — Report / buildReport に physical_size 系フィールドを追加（既存 size は維持、差分モード互換確保）
+
+### 9-D: CLI フラグ
+
+- [ ] internal/app/app.go — Config に SizeMode（"logical" / "physical"）を追加。`-size-mode` フラグで切替
+- [ ] デフォルトは "logical"。ただしサマリの「推定節約可能量」だけは常に物理サイズで計算（嘘にならないように）
+- [ ] README.md にスパース対応の説明セクション追加。Docker.raw / diffdisk の実例を掲載
+
+### 9-E: 検証
+
+- [ ] `./mogura ~` を実行し、Docker.raw の物理サイズが `du -sh` と一致することを確認
+- [ ] `./mogura -diff` が既存の JSON スナップショット（physical_size フィールド無し）を読み込んでも壊れないことを確認（後方互換）
+
+
 ---
 
 ## Backlog

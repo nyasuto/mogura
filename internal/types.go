@@ -6,11 +6,12 @@ import (
 )
 
 type FileInfo struct {
-	Path    string    `json:"path"`
-	Size    int64     `json:"size"`
-	Dir     string    `json:"dir"`
-	Ext     string    `json:"ext"`
-	ModTime time.Time `json:"mod_time"`
+	Path         string    `json:"path"`
+	Size         int64     `json:"size"`
+	PhysicalSize int64     `json:"physical_size"`
+	Dir          string    `json:"dir"`
+	Ext          string    `json:"ext"`
+	ModTime      time.Time `json:"mod_time"`
 }
 
 func FormatSize(bytes int64) string {
