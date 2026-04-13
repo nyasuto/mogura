@@ -31,6 +31,18 @@
         .tooltip .tt-row { display: flex; justify-content: space-between; gap: 16px; }
         .tooltip .tt-label { color: #888; }
         .tooltip .tt-value { color: #e0e0e0; font-weight: 500; }
+        .summary-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; padding: 16px 0; }
+        .summary-card { background: #16213e; border: 1px solid #0f3460; border-radius: 8px; padding: 16px; }
+        .summary-card .card-title { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .summary-card .card-value { font-size: 1.5rem; font-weight: 700; color: #fff; }
+        .summary-card .card-value.savings { color: #50c878; }
+        .category-bars { display: flex; flex-direction: column; gap: 6px; }
+        .cat-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+        .cat-label { width: 80px; text-align: right; color: #aaa; flex-shrink: 0; }
+        .cat-bar-bg { flex: 1; height: 18px; background: #0f3460; border-radius: 3px; overflow: hidden; position: relative; }
+        .cat-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+        .cat-bar-text { position: absolute; right: 6px; top: 0; line-height: 18px; font-size: 10px; color: #ccc; }
+        .cat-size { width: 70px; text-align: right; color: #ccc; font-size: 11px; flex-shrink: 0; }
     </style>
 </head>
 <body>
@@ -39,6 +51,7 @@
         <div class="meta" id="meta"></div>
     </div>
     <div class="container">
+        <div class="summary-panel" id="summary"></div>
         <div class="legend" id="legend"></div>
         <div class="breadcrumb" id="breadcrumb"></div>
         <div id="treemap"></div>
@@ -74,6 +87,82 @@
             }
             return categoryColors["その他"];
         }
+
+        // Summary panel
+        (function() {
+            var panel = document.getElementById("summary");
+
+            var totalCard = document.createElement("div");
+            totalCard.className = "summary-card";
+            totalCard.innerHTML = '<div class="card-title">総容量</div><div class="card-value">' + formatSize(data.total_size) + '</div>';
+            panel.appendChild(totalCard);
+
+            var cacheSize = 0;
+            var cats = data.categories || {};
+            Object.keys(cats).forEach(function(k) {
+                if (k === "キャッシュ") cacheSize += cats[k].size;
+            });
+            var wasteTotal = 0;
+            (data.waste_dirs || []).forEach(function(w) { wasteTotal += w.size; });
+            cacheSize = Math.max(cacheSize, wasteTotal);
+
+            var cacheCard = document.createElement("div");
+            cacheCard.className = "summary-card";
+            cacheCard.innerHTML = '<div class="card-title">キャッシュ合計</div><div class="card-value">' + formatSize(cacheSize) + '</div>';
+            panel.appendChild(cacheCard);
+
+            var savings = data.savings_estimate || 0;
+            var savingsCard = document.createElement("div");
+            savingsCard.className = "summary-card";
+            savingsCard.innerHTML = '<div class="card-title">推定節約可能量</div><div class="card-value savings">' + formatSize(savings) + '</div>';
+            panel.appendChild(savingsCard);
+
+            var catCard = document.createElement("div");
+            catCard.className = "summary-card";
+            catCard.style.gridColumn = "1 / -1";
+            var catTitle = document.createElement("div");
+            catTitle.className = "card-title";
+            catTitle.textContent = "カテゴリ内訳";
+            catCard.appendChild(catTitle);
+
+            var bars = document.createElement("div");
+            bars.className = "category-bars";
+            var entries = [];
+            Object.keys(cats).forEach(function(k) { entries.push({ name: k, size: cats[k].size, percent: cats[k].percent }); });
+            entries.sort(function(a, b) { return b.size - a.size; });
+            var maxPct = entries.length > 0 ? entries[0].percent : 1;
+
+            entries.forEach(function(e) {
+                var row = document.createElement("div");
+                row.className = "cat-row";
+                var label = document.createElement("span");
+                label.className = "cat-label";
+                label.textContent = e.name;
+                row.appendChild(label);
+
+                var barBg = document.createElement("div");
+                barBg.className = "cat-bar-bg";
+                var fill = document.createElement("div");
+                fill.className = "cat-bar-fill";
+                fill.style.width = (e.percent / maxPct * 100) + "%";
+                fill.style.backgroundColor = categoryColors[e.name] || categoryColors["その他"];
+                barBg.appendChild(fill);
+                var barText = document.createElement("span");
+                barText.className = "cat-bar-text";
+                barText.textContent = e.percent.toFixed(1) + "%";
+                barBg.appendChild(barText);
+                row.appendChild(barBg);
+
+                var sizeLabel = document.createElement("span");
+                sizeLabel.className = "cat-size";
+                sizeLabel.textContent = formatSize(e.size);
+                row.appendChild(sizeLabel);
+
+                bars.appendChild(row);
+            });
+            catCard.appendChild(bars);
+            panel.appendChild(catCard);
+        })();
 
         var legendEl = document.getElementById("legend");
         Object.keys(categoryColors).forEach(function(cat) {
