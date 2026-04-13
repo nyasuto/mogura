@@ -7,7 +7,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"syscall"
 
 	"mogura/internal"
 )
@@ -140,22 +139,21 @@ func (ps *parallelScanner) enqueue(path string) {
 }
 
 func (ps *parallelScanner) processDir(task dirTask) {
-	entries, err := os.ReadDir(task.path)
+	entries, err := readDirBulk(task.path)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "warning: %s: %v\n", task.path, err)
 		return
 	}
 
 	for _, entry := range entries {
-		name := entry.Name()
-		path := filepath.Join(task.path, name)
-
-		if entry.Type()&os.ModeSymlink != 0 {
+		if entry.IsSymlink {
 			continue
 		}
 
-		if entry.IsDir() {
-			if matchesExclude(name, ps.exactSet, ps.globs) {
+		path := filepath.Join(task.path, entry.Name)
+
+		if entry.IsDir {
+			if matchesExclude(entry.Name, ps.exactSet, ps.globs) {
 				continue
 			}
 			if ps.opts.OneFileSystem {
@@ -173,30 +171,17 @@ func (ps *parallelScanner) processDir(task dirTask) {
 			continue
 		}
 
-		if matchesExclude(name, ps.exactSet, ps.globs) {
+		if matchesExclude(entry.Name, ps.exactSet, ps.globs) {
 			continue
-		}
-
-		info, infoErr := entry.Info()
-		if infoErr != nil {
-			fmt.Fprintf(os.Stderr, "warning: %s: %v\n", path, infoErr)
-			continue
-		}
-
-		var physicalSize int64
-		if stat, ok := info.Sys().(*syscall.Stat_t); ok {
-			physicalSize = stat.Blocks * 512
-		} else {
-			physicalSize = info.Size()
 		}
 
 		ps.resultCh <- internal.FileInfo{
 			Path:         path,
-			Size:         info.Size(),
-			PhysicalSize: physicalSize,
+			Size:         entry.Size,
+			PhysicalSize: entry.PhysicalSize,
 			Dir:          task.path,
-			Ext:          strings.ToLower(filepath.Ext(name)),
-			ModTime:      info.ModTime(),
+			Ext:          strings.ToLower(filepath.Ext(entry.Name)),
+			ModTime:      entry.ModTime,
 		}
 	}
 }

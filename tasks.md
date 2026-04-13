@@ -229,7 +229,7 @@
 - [x] internal/scanner/bulkstat_darwin.go — darwin build tag (`//go:build darwin`) で getattrlistbulk ラッパを実装。`struct attrlist` / `ATTR_BIT_MAP_COUNT` / `ATTR_CMN_NAME` / `ATTR_CMN_OBJTYPE` / `ATTR_CMN_MODTIME` / `ATTR_FILE_TOTALSIZE` / `ATTR_FILE_ALLOCSIZE`（= 物理サイズ、Phase 9 と連携）を取得
 - [x] internal/scanner/bulkstat_darwin.go — readDirBulk(path string) ([]bulkEntry, error) 関数として公開。1 回の呼び出しで 1 バッファ分（通常 64〜256 エントリ）、eof まで繰り返し呼ぶ。属性バッファのパース（可変長レコードのため offset 計算に注意）をユニットテストでカバー
 - [x] internal/scanner/bulkstat_other.go — darwin 以外の build tag (`//go:build !darwin`) で readDirBulk をスタブ実装（`os.ReadDir` + `os.Lstat` にフォールバック）。型とシグネチャを darwin 版と揃える
-- [ ] internal/scanner/parallel.go — workerFn を readDirBulk ベースに書き換え。darwin では 1 syscall で済み、他 OS では従来どおり os.ReadDir + Lstat
+- [x] internal/scanner/parallel.go — workerFn を readDirBulk ベースに書き換え。darwin では 1 syscall で済み、他 OS では従来どおり os.ReadDir + Lstat
 - [ ] internal/scanner/bulkstat_darwin_test.go — darwin 限定テスト（build tag で制限）。一時ディレクトリに各種ファイル（regular / dir / symlink / スパース）を作り、readDirBulk の結果が Lstat と一致することを検証
 - [ ] 実機ベンチ: Phase 10-A 単独版 vs 10-A + 10-B darwin 版で `~/Library` のスキャン時間を比較。README に結果記録
 - [ ] フォールバック検証: darwin でも `-bulkstat=false` フラグ（あるいは内部切替）で従来経路に戻せることを確認。何か問題が出た時の脱出口として残す
