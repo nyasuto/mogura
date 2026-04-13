@@ -310,3 +310,56 @@ func TestScanNonExistent(t *testing.T) {
 		t.Error("expected error for non-existent path")
 	}
 }
+
+func TestDeviceID(t *testing.T) {
+	dir := t.TempDir()
+	dev, err := deviceID(dir)
+	if err != nil {
+		t.Fatalf("deviceID(%q) error: %v", dir, err)
+	}
+	if dev == 0 {
+		t.Error("expected non-zero device ID")
+	}
+
+	_, err = deviceID("/nonexistent/path")
+	if err == nil {
+		t.Error("expected error for non-existent path")
+	}
+}
+
+func TestScanOneFileSystem(t *testing.T) {
+	base := t.TempDir()
+
+	sub := filepath.Join(base, "sub")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, f := range []string{
+		filepath.Join(base, "a.txt"),
+		filepath.Join(sub, "b.txt"),
+	} {
+		if err := os.WriteFile(f, []byte("data"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	filesWithFlag, err := Scan(base, ScanOpts{OneFileSystem: true})
+	if err != nil {
+		t.Fatalf("Scan() with OneFileSystem error: %v", err)
+	}
+
+	filesWithout, err := Scan(base, ScanOpts{OneFileSystem: false})
+	if err != nil {
+		t.Fatalf("Scan() without OneFileSystem error: %v", err)
+	}
+
+	if len(filesWithFlag) != len(filesWithout) {
+		t.Errorf("same filesystem: expected equal file counts, got %d (with flag) vs %d (without)",
+			len(filesWithFlag), len(filesWithout))
+	}
+
+	if len(filesWithFlag) != 2 {
+		t.Errorf("expected 2 files, got %d", len(filesWithFlag))
+	}
+}

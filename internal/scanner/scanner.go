@@ -6,13 +6,23 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"mogura/internal"
 )
 
 type ScanOpts struct {
-	Exclude    []string
-	OnProgress func(scanned int, currentDir string)
+	Exclude       []string
+	OnProgress    func(scanned int, currentDir string)
+	OneFileSystem bool
+}
+
+func deviceID(path string) (uint64, error) {
+	var stat syscall.Stat_t
+	if err := syscall.Lstat(path, &stat); err != nil {
+		return 0, err
+	}
+	return uint64(stat.Dev), nil
 }
 
 func isGlobPattern(pattern string) bool {
@@ -56,6 +66,14 @@ func Scan(root string, opts ...ScanOpts) ([]internal.FileInfo, error) {
 		}
 	}
 
+	var rootDev uint64
+	if opt.OneFileSystem {
+		rootDev, err = deviceID(root)
+		if err != nil {
+			return nil, fmt.Errorf("cannot stat root: %w", err)
+		}
+	}
+
 	var files []internal.FileInfo
 	scanned := 0
 
@@ -72,6 +90,16 @@ func Scan(root string, opts ...ScanOpts) ([]internal.FileInfo, error) {
 		if d.IsDir() {
 			if path != root && matchesExclude(d.Name(), exactSet, globs) {
 				return filepath.SkipDir
+			}
+			if opt.OneFileSystem && path != root {
+				dev, devErr := deviceID(path)
+				if devErr != nil {
+					fmt.Fprintf(os.Stderr, "warning: %s: %v\n", path, devErr)
+					return filepath.SkipDir
+				}
+				if dev != rootDev {
+					return filepath.SkipDir
+				}
 			}
 			return nil
 		}
