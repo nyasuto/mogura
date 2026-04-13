@@ -168,7 +168,7 @@
 ### 9-A: 物理サイズの取得
 
 - [x] internal/types.go — FileInfo に PhysicalSize int64 フィールドを追加。JSON タグは `physical_size`（既存 `size` は論理サイズのまま据え置き = 後方互換）
-- [ ] internal/scanner/scanner.go — darwin / linux 用に syscall.Stat_t.Blocks を読み取って PhysicalSize に詰める実装。既存の Lstat 取得経路に統合（重複 stat は避ける）+ テスト
+- [x] internal/scanner/scanner.go — darwin / linux 用に syscall.Stat_t.Blocks を読み取って PhysicalSize に詰める実装。既存の Lstat 取得経路に統合（重複 stat は避ける）+ テスト
 - [ ] internal/scanner/scanner_test.go — `os.Truncate` で巨大論理サイズのスパースファイルを一時生成し、PhysicalSize << Size になることを検証するテストケース
 
 ### 9-B: 集計への反映

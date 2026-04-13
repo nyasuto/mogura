@@ -116,12 +116,20 @@ func Scan(root string, opts ...ScanOpts) ([]internal.FileInfo, error) {
 
 		ext := strings.ToLower(filepath.Ext(path))
 
+		var physicalSize int64
+		if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+			physicalSize = stat.Blocks * 512
+		} else {
+			physicalSize = info.Size()
+		}
+
 		files = append(files, internal.FileInfo{
-			Path:    path,
-			Size:    info.Size(),
-			Dir:     filepath.Dir(path),
-			Ext:     ext,
-			ModTime: info.ModTime(),
+			Path:         path,
+			Size:         info.Size(),
+			PhysicalSize: physicalSize,
+			Dir:          filepath.Dir(path),
+			Ext:          ext,
+			ModTime:      info.ModTime(),
 		})
 		scanned++
 

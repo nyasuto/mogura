@@ -45,6 +45,9 @@ func TestScan(t *testing.T) {
 		if f.Size <= 0 {
 			t.Errorf("expected positive size for %s, got %d", f.Path, f.Size)
 		}
+		if f.PhysicalSize <= 0 {
+			t.Errorf("expected positive physical size for %s, got %d", f.Path, f.PhysicalSize)
+		}
 	}
 
 	for _, name := range []string{"a.txt", "b.go"} {
