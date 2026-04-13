@@ -65,6 +65,102 @@
 - [x] internal/formatter/json.go — Report 型に WasteDirs, StaleSummary, SavingsEstimate フィールドを追加。JSON 出力に反映
 - [x] main.go — CLI にゴミ発見結果を統合。`--older-than N`（日数、デフォルト 365）フラグを追加。デフォルト出力にサマリセクションを追加
 
+
+## Phase 5: 土台整理 + 実用性
+ 
+### 5-A: main.go のオーケストレーション層抽出（R1）
+ 
+- [x] internal/app/app.go — Config 型の定義。TargetPath, TopN, Depth, OutputFormat(text/json/tree/html), Exclude[]string, OlderThanDays のフィールドを持つ
+- [ ] internal/app/app.go — Run(cfg Config, stdout io.Writer, stderr io.Writer) error 関数のシグネチャと空実装。main.go から呼べることを確認
+- [ ] main.go → internal/app/app.go — flag 解析ロジックを ParseFlags(args []string) (Config, error) として移動。main.go は ParseFlags → Run だけにする
+- [ ] internal/app/app.go — Run 関数にスキャン → 分析 → 出力のロジックを main.go から移植。main.go は 20 行以内になること
+- [ ] internal/app/app_test.go — Run 関数の基本テスト。テスト用 tmpdir をスキャンして出力が空でないことを確認
+ 
+### 5-B: Result 集約型の導入（R2）
+ 
+- [ ] internal/analyzer/result.go — Result 型の定義。TotalSize, DirSizes, ExtStats, CategoryStats, TopFiles, DirTree, WasteDirs, StaleSummary を全て持つ構造体
+- [ ] internal/analyzer/analyze.go — Analyze(files []types.FileInfo, opts AnalyzeOpts) Result 関数。既存の各 analyzer を内部で呼び出して Result に詰める + テスト
+- [ ] internal/app/app.go — Run 関数を Analyze 呼び出しに書き換え。個別の analyzer 呼び出しを削除
+- [ ] internal/formatter/ — 各フォーマッタを Result を受け取る形に統一。FormatTable(Result, io.Writer), FormatJSON(Result, io.Writer), FormatTree(Result, io.Writer)
+- [ ] 旧 main.go 内の analyzer 個別呼び出しコードが完全に消えていることを確認。go vet + go test パス
+ 
+### 5-C: 除外パターン（F2）
+ 
+- [ ] internal/scanner/scanner.go — ScanOpts 型に Exclude []string フィールドを追加。Walk 時にパスがパターンに一致したらスキップ + テスト
+- [ ] パターンマッチの仕様決定: ディレクトリ名の完全一致（`node_modules`）とグロブ（`*.tmp`）の両方を対応 + テスト
+- [ ] internal/app/app.go — Config.Exclude を ScanOpts に渡す配線。`-exclude 'node_modules,.git,*.tmp'` をカンマ区切りでパース
+- [ ] README.md に `-exclude` の使い方を追記
+ 
+## Phase 6: HTML ツリーマップ
+ 
+### 6-A: HTML テンプレート基盤
+ 
+- [ ] internal/formatter/html.go — FormatHTML(Result, io.Writer) error のシグネチャと空実装
+- [ ] internal/formatter/templates/ ディレクトリ作成。report.html テンプレートの骨格を作成（html/template 用）。D3.js は cdnjs から読み込む script タグ
+- [ ] internal/formatter/html.go — go:embed で templates/report.html を埋め込み。Result の JSON を `<script>const data = {{.}}</script>` としてテンプレートに注入
+- [ ] internal/formatter/html.go — テスト。Result のモックデータで HTML を生成し、`const data =` が含まれることを確認
+ 
+### 6-B: ツリーマップ描画
+ 
+- [ ] templates/report.html — D3.js treemap レイアウトの実装。DirTree の children を d3.hierarchy → d3.treemap で矩形配置。各矩形にディレクトリ名とサイズを表示
+- [ ] templates/report.html — カテゴリ別の色分け。ディレクトリ内の支配的なカテゴリ（動画/画像/コード等）で矩形の背景色を変える
+- [ ] templates/report.html — クリックでドリルダウン。矩形をクリックするとそのディレクトリを新しいルートとしてツリーマップを再描画。パンくずリストで階層を表示
+- [ ] templates/report.html — ホバー時にツールチップ。ディレクトリ名、サイズ（human-readable）、ファイル数、全体に対する割合を表示
+ 
+### 6-C: サマリパネル
+ 
+- [ ] templates/report.html — ツリーマップの上にサマリパネルを追加。総容量、カテゴリ内訳（円グラフ or 棒グラフ）、キャッシュ合計、推定節約可能量
+- [ ] templates/report.html — 巨大ファイル Top10 のテーブルをサイドパネルまたは下部に表示
+ 
+### 6-D: CLI 統合
+ 
+- [ ] internal/app/app.go — OutputFormat が html のとき FormatHTML を呼び出す分岐を追加
+- [ ] main.go / flags — `-html` フラグの追加。stdout に HTML を出力（`mogura --html ~ > report.html`）
+- [ ] README.md に HTML レポートの使い方とスクリーンショット説明を追記
+ 
+## Phase 7: 差分モード
+ 
+### 7-A: 差分計算
+ 
+- [ ] internal/analyzer/diff.go — DirDiff 型の定義。Path, PrevSize, CurrSize, Delta int64 のフィールド
+- [ ] internal/analyzer/diff.go — LoadPrevResult(path string) (Result, error) 関数。JSON ファイルを読み込んで Result にデコード + テスト
+- [ ] internal/analyzer/diff.go — ComputeDiff(prev, curr Result) []DirDiff 関数。ディレクトリ別のサイズ差分を計算。新規ディレクトリと削除ディレクトリも検出。Delta 降順でソート + テスト
+ 
+### 7-B: 差分出力
+ 
+- [ ] internal/formatter/table.go — FormatDiffTable 関数。増減を +/- 付きで表示、増加は赤系・減少は緑系の ANSI カラー + テスト
+- [ ] internal/formatter/json.go — Result に DiffSummary フィールドを追加（optional）。差分モード時のみ値が入る
+- [ ] templates/report.html — 差分モード時にツリーマップの矩形色を「増加=赤、減少=青、変化なし=グレー」のヒートマップに切り替え
+ 
+### 7-C: CLI 統合
+ 
+- [ ] internal/app/app.go — Config に DiffPath string を追加。`-diff prev.json` で前回 JSON を読み込み ComputeDiff を呼ぶ
+- [ ] README.md に差分モードのワークフロー（`mogura --json ~ > snap.json` → 後日 `mogura --diff snap.json ~`）を追記
+ 
+## Phase 8: CLI 磨き込み
+ 
+### 8-A: ASCII 棒グラフ（V1）
+ 
+- [ ] internal/formatter/bar.go — RenderBar(value, maxValue, width int) string 関数。`████████░░░░` を返す + テスト
+- [ ] internal/formatter/table.go — カテゴリ・拡張子・ディレクトリのテーブル行末に RenderBar を追加
+ 
+### 8-B: フィルタ（F7）
+ 
+- [ ] internal/app/app.go — Config に MinSize int64, FilterExt []string を追加
+- [ ] internal/app/app.go — スキャン結果に対して MinSize / FilterExt でフィルタリングする関数。Analyze の前段で適用 + テスト
+- [ ] flags — `-min-size 10M`（human-readable パース）、`-ext mp4,mkv` フラグを追加
+ 
+### 8-C: 進捗表示（F6）
+ 
+- [ ] internal/scanner/scanner.go — ScanOpts に OnProgress func(scanned int, currentDir string) コールバックを追加
+- [ ] internal/app/app.go — stderr に `Scanning... 12345 files (~/Library/Caches)` を 500ms 間隔で表示。`-quiet` フラグで抑制
+ 
+### 8-D: マウント境界（F12）
+ 
+- [ ] internal/scanner/scanner.go — ScanOpts に OneFileSystem bool を追加。Walk 時にデバイス ID が変わったらスキップ（syscall.Stat_t.Dev を比較） + テスト
+- [ ] flags — `-x` フラグの追加
+ 
+ 
 ---
 
 ## Backlog
