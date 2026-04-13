@@ -29,6 +29,8 @@ type Config struct {
 	Exclude       []string
 	OlderThanDays int
 	DiffPath      string
+	MinSize       int64
+	FilterExt     []string
 }
 
 func ParseFlags(args []string) (Config, error) {
