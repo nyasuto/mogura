@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -33,6 +34,7 @@ type Config struct {
 	DiffPath      string
 	MinSize       int64
 	FilterExt     []string
+	Quiet         bool
 }
 
 func ParseFlags(args []string) (Config, error) {
@@ -48,6 +50,7 @@ func ParseFlags(args []string) (Config, error) {
 	diffPath := fs.String("diff", "", "前回の JSON レポートファイルと差分比較")
 	minSizeStr := fs.String("min-size", "", "最小ファイルサイズ（例: 10M, 1G, 500K）")
 	filterExt := fs.String("ext", "", "対象拡張子（カンマ区切り: mp4,mkv,avi）")
+	quiet := fs.Bool("quiet", false, "進捗表示を抑制")
 
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "usage: mogura [flags] <path>\n")
@@ -110,6 +113,7 @@ func ParseFlags(args []string) (Config, error) {
 		DiffPath:      *diffPath,
 		MinSize:       minSize,
 		FilterExt:     filterExts,
+		Quiet:         *quiet,
 	}, nil
 }
 
@@ -155,6 +159,17 @@ func ParseHumanSize(s string) (int64, error) {
 	return int64(val * float64(multiplier)), nil
 }
 
+func shortenPath(path string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return path
+	}
+	if strings.HasPrefix(path, home) {
+		return "~" + path[len(home):]
+	}
+	return path
+}
+
 func FilterFiles(files []internal.FileInfo, minSize int64, filterExt []string) []internal.FileInfo {
 	if minSize == 0 && len(filterExt) == 0 {
 		return files
@@ -183,11 +198,30 @@ func FilterFiles(files []internal.FileInfo, minSize int64, filterExt []string) [
 }
 
 func Run(cfg Config, stdout io.Writer, stderr io.Writer) error {
-	files, err := scanner.Scan(cfg.TargetPath, scanner.ScanOpts{
+	scanOpts := scanner.ScanOpts{
 		Exclude: cfg.Exclude,
-	})
+	}
+
+	if !cfg.Quiet {
+		lastUpdate := time.Time{}
+		scanOpts.OnProgress = func(scanned int, currentDir string) {
+			now := time.Now()
+			if now.Sub(lastUpdate) < 500*time.Millisecond {
+				return
+			}
+			lastUpdate = now
+			dir := shortenPath(currentDir)
+			fmt.Fprintf(stderr, "\rScanning... %d files (%s)", scanned, dir)
+		}
+	}
+
+	files, err := scanner.Scan(cfg.TargetPath, scanOpts)
 	if err != nil {
 		return err
+	}
+
+	if !cfg.Quiet && scanOpts.OnProgress != nil {
+		fmt.Fprintf(stderr, "\r\033[K")
 	}
 
 	files = FilterFiles(files, cfg.MinSize, cfg.FilterExt)
