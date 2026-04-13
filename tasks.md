@@ -124,7 +124,7 @@
  
 - [x] internal/analyzer/diff.go — DirDiff 型の定義。Path, PrevSize, CurrSize, Delta int64 のフィールド
 - [x] internal/analyzer/diff.go — LoadPrevResult(path string) (Result, error) 関数。JSON ファイルを読み込んで Result にデコード + テスト
-- [ ] internal/analyzer/diff.go — ComputeDiff(prev, curr Result) []DirDiff 関数。ディレクトリ別のサイズ差分を計算。新規ディレクトリと削除ディレクトリも検出。Delta 降順でソート + テスト
+- [x] internal/analyzer/diff.go — ComputeDiff(prev, curr Result) []DirDiff 関数。ディレクトリ別のサイズ差分を計算。新規ディレクトリと削除ディレクトリも検出。Delta 降順でソート + テスト
  
 ### 7-B: 差分出力
  
@@ -164,6 +164,8 @@
 ---
 
 ## Backlog
+
+- TestBuildTreeDominantCategory がフラッキーだった（同サイズカテゴリの map イテレーション順依存）。テストデータは修正済みだが、tree.go の DominantCategory 決定ロジック自体に同率時のタイブレークルールを追加すべきか検討
 
 ---
 

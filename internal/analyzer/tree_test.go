@@ -226,7 +226,7 @@ func TestPrunePreservesOriginal(t *testing.T) {
 
 func TestBuildTreeDominantCategory(t *testing.T) {
 	files := []internal.FileInfo{
-		{Path: "/root/a.mp4", Size: 500, Dir: "/root", Ext: ".mp4"},
+		{Path: "/root/a.mp4", Size: 600, Dir: "/root", Ext: ".mp4"},
 		{Path: "/root/b.txt", Size: 100, Dir: "/root", Ext: ".txt"},
 		{Path: "/root/sub/c.go", Size: 300, Dir: "/root/sub", Ext: ".go"},
 		{Path: "/root/sub/d.go", Size: 200, Dir: "/root/sub", Ext: ".go"},

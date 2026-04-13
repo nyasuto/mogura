@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"mogura/internal"
 	"os"
+	"sort"
 	"time"
 )
 
@@ -29,6 +30,40 @@ type jsonReport struct {
 		DaysThreshold int   `json:"days_threshold"`
 	} `json:"stale_summary"`
 	SavingsEstimate int64 `json:"savings_estimate"`
+}
+
+func ComputeDiff(prev, curr Result) []DirDiff {
+	seen := make(map[string]bool)
+	var diffs []DirDiff
+
+	for path, currSize := range curr.DirSizes {
+		seen[path] = true
+		prevSize := prev.DirSizes[path]
+		diffs = append(diffs, DirDiff{
+			Path:     path,
+			PrevSize: prevSize,
+			CurrSize: currSize,
+			Delta:    currSize - prevSize,
+		})
+	}
+
+	for path, prevSize := range prev.DirSizes {
+		if seen[path] {
+			continue
+		}
+		diffs = append(diffs, DirDiff{
+			Path:     path,
+			PrevSize: prevSize,
+			CurrSize: 0,
+			Delta:    -prevSize,
+		})
+	}
+
+	sort.Slice(diffs, func(i, j int) bool {
+		return diffs[i].Delta > diffs[j].Delta
+	})
+
+	return diffs
 }
 
 func LoadPrevResult(path string) (Result, error) {
