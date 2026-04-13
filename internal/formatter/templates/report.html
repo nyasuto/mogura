@@ -313,13 +313,23 @@
             var width = container.clientWidth;
             var height = container.clientHeight;
 
-            var node = treeNode;
-            if (!node.children || node.children.length === 0) {
-                node = { name: node.name, size: node.size, file_count: node.file_count, dominant_category: node.dominant_category, children: [node] };
-            }
+            var childList = (treeNode.children && treeNode.children.length > 0)
+                ? treeNode.children
+                : [treeNode];
+            var flatChildren = childList.map(function(c) {
+                return {
+                    name: c.name,
+                    size: c.size,
+                    physical_size: c.physical_size,
+                    file_count: c.file_count,
+                    dominant_category: c.dominant_category,
+                    _original: c
+                };
+            });
+            var node = { name: treeNode.name, children: flatChildren };
 
             var root = d3.hierarchy(node)
-                .sum(function(d) { return d.children && d.children.length > 0 ? 0 : getSize(d); })
+                .sum(function(d) { return d._original ? getSize(d) : 0; })
                 .sort(function(a, b) { return b.value - a.value; });
 
             d3.treemap()
@@ -344,12 +354,14 @@
                     div.style.backgroundColor = getCategoryColor(leaf);
                 }
 
-                var original = leaf.data;
+                var original = leaf.data._original || leaf.data;
                 if (original.children && original.children.length > 0) {
                     div.addEventListener("click", function() {
                         navStack.push(original);
                         renderTreemap(original);
                     });
+                } else {
+                    div.style.cursor = "default";
                 }
 
                 (function(nodeData, leafNode) {

@@ -11,3 +11,5 @@ Thumbs.db
 *.swp
 
 /mogura
+.playwright-mcp
+*.html
