@@ -17,9 +17,9 @@ func setupTmpDir(t *testing.T) string {
 	}
 
 	files := map[string]string{
-		filepath.Join(dir, "hello.txt"):    "hello world",
-		filepath.Join(sub, "data.csv"):     "a,b,c\n1,2,3\n",
-		filepath.Join(sub, "image.png"):    "fake png data for testing",
+		filepath.Join(dir, "hello.txt"): "hello world",
+		filepath.Join(sub, "data.csv"):  "a,b,c\n1,2,3\n",
+		filepath.Join(sub, "image.png"): "fake png data for testing",
 	}
 	for path, content := range files {
 		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {

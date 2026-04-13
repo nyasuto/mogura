@@ -1,0 +1,128 @@
+package analyzer
+
+import (
+	"mogura/internal"
+	"testing"
+	"time"
+)
+
+func TestAnalyze(t *testing.T) {
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	oldTime := now.AddDate(-2, 0, 0)
+
+	files := []internal.FileInfo{
+		{Path: "/app/main.go", Dir: "/app", Ext: ".go", Size: 1000, ModTime: now},
+		{Path: "/app/util.go", Dir: "/app", Ext: ".go", Size: 500, ModTime: now},
+		{Path: "/app/img/photo.jpg", Dir: "/app/img", Ext: ".jpg", Size: 5000, ModTime: oldTime},
+		{Path: "/app/data/old.csv", Dir: "/app/data", Ext: ".csv", Size: 3000, ModTime: oldTime},
+	}
+
+	opts := AnalyzeOpts{
+		TopN:          2,
+		Depth:         1,
+		OlderThanDays: 365,
+		Now:           now,
+	}
+
+	result := Analyze(files, opts)
+
+	t.Run("TotalSize", func(t *testing.T) {
+		if result.TotalSize != 9500 {
+			t.Errorf("TotalSize = %d, want 9500", result.TotalSize)
+		}
+	})
+
+	t.Run("DirSizes", func(t *testing.T) {
+		if result.DirSizes["/app"] != 1500 {
+			t.Errorf("DirSizes[/app] = %d, want 1500", result.DirSizes["/app"])
+		}
+		if result.DirSizes["/app/img"] != 5000 {
+			t.Errorf("DirSizes[/app/img] = %d, want 5000", result.DirSizes["/app/img"])
+		}
+	})
+
+	t.Run("ExtStats", func(t *testing.T) {
+		goStats, ok := result.ExtStats[".go"]
+		if !ok {
+			t.Fatal("ExtStats missing .go")
+		}
+		if goStats.Size != 1500 || goStats.Count != 2 {
+			t.Errorf("ExtStats[.go] = {Size:%d, Count:%d}, want {1500, 2}", goStats.Size, goStats.Count)
+		}
+	})
+
+	t.Run("CategoryStats", func(t *testing.T) {
+		if _, ok := result.CategoryStats[CategoryCode]; !ok {
+			t.Error("CategoryStats missing コード")
+		}
+		if _, ok := result.CategoryStats[CategoryImage]; !ok {
+			t.Error("CategoryStats missing 画像")
+		}
+	})
+
+	t.Run("TopFiles", func(t *testing.T) {
+		if len(result.TopFiles) != 2 {
+			t.Fatalf("TopFiles len = %d, want 2", len(result.TopFiles))
+		}
+		if result.TopFiles[0].Size != 5000 {
+			t.Errorf("TopFiles[0].Size = %d, want 5000", result.TopFiles[0].Size)
+		}
+	})
+
+	t.Run("DirTree", func(t *testing.T) {
+		if result.DirTree.Size != 9500 {
+			t.Errorf("DirTree.Size = %d, want 9500", result.DirTree.Size)
+		}
+	})
+
+	t.Run("StaleSummary", func(t *testing.T) {
+		if result.StaleSummary.TotalFiles != 2 {
+			t.Errorf("StaleSummary.TotalFiles = %d, want 2", result.StaleSummary.TotalFiles)
+		}
+		if result.StaleSummary.TotalSize != 8000 {
+			t.Errorf("StaleSummary.TotalSize = %d, want 8000", result.StaleSummary.TotalSize)
+		}
+	})
+}
+
+func TestAnalyzeDefaults(t *testing.T) {
+	files := []internal.FileInfo{
+		{Path: "/a/f.txt", Dir: "/a", Ext: ".txt", Size: 100, ModTime: time.Now()},
+	}
+
+	result := Analyze(files, AnalyzeOpts{})
+
+	if result.TotalSize != 100 {
+		t.Errorf("TotalSize = %d, want 100", result.TotalSize)
+	}
+	if len(result.TopFiles) != 1 {
+		t.Errorf("TopFiles len = %d, want 1", len(result.TopFiles))
+	}
+}
+
+func TestAnalyzeEmpty(t *testing.T) {
+	result := Analyze(nil, AnalyzeOpts{})
+
+	if result.TotalSize != 0 {
+		t.Errorf("TotalSize = %d, want 0", result.TotalSize)
+	}
+	if len(result.DirSizes) != 0 {
+		t.Errorf("DirSizes len = %d, want 0", len(result.DirSizes))
+	}
+}
+
+func TestAnalyzeWasteDirs(t *testing.T) {
+	files := []internal.FileInfo{
+		{Path: "/app/node_modules/pkg/index.js", Dir: "/app/node_modules/pkg", Ext: ".js", Size: 2000, ModTime: time.Now()},
+		{Path: "/app/src/main.go", Dir: "/app/src", Ext: ".go", Size: 500, ModTime: time.Now()},
+	}
+
+	result := Analyze(files, AnalyzeOpts{})
+
+	if len(result.WasteDirs) != 1 {
+		t.Fatalf("WasteDirs len = %d, want 1", len(result.WasteDirs))
+	}
+	if result.WasteDirs[0].Kind != "node_modules" {
+		t.Errorf("WasteDirs[0].Kind = %q, want %q", result.WasteDirs[0].Kind, "node_modules")
+	}
+}
