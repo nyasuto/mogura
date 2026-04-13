@@ -80,7 +80,9 @@
         }
 
         var metaEl = document.getElementById("meta");
-        metaEl.textContent = "Total: " + formatSize(data.total_size) + " — Scanned at: " + new Date(data.scanned_at).toLocaleString("ja-JP");
+        var metaText = "Total: " + formatSize(data.total_size) + " — Scanned at: " + new Date(data.scanned_at).toLocaleString("ja-JP");
+        if (isDiffMode) metaText += " — 差分モード";
+        metaEl.textContent = metaText;
 
         var categoryColors = {
             "動画": "#e94560",
@@ -91,6 +93,52 @@
             "アーカイブ": "#e67e22",
             "その他": "#7f8c8d"
         };
+
+        var isDiffMode = !!(data.diff_summary && data.diff_summary.length > 0);
+        var diffMap = {};
+        if (isDiffMode) {
+            data.diff_summary.forEach(function(d) { diffMap[d.path] = d.delta; });
+        }
+
+        function getNodePath(d3Node) {
+            var parts = [];
+            var n = d3Node;
+            while (n) {
+                parts.unshift(n.data.name);
+                n = n.parent;
+            }
+            return parts.join("/");
+        }
+
+        function getDiffColor(delta) {
+            if (delta > 0) {
+                var intensity = Math.min(delta / (1024 * 1024 * 100), 1);
+                var r = Math.round(180 + 75 * intensity);
+                var g = Math.round(60 - 30 * intensity);
+                var b = Math.round(60 - 30 * intensity);
+                return "rgb(" + r + "," + g + "," + b + ")";
+            } else if (delta < 0) {
+                var intensity = Math.min(-delta / (1024 * 1024 * 100), 1);
+                var r = Math.round(60 - 30 * intensity);
+                var g = Math.round(60 - 30 * intensity);
+                var b = Math.round(180 + 75 * intensity);
+                return "rgb(" + r + "," + g + "," + b + ")";
+            }
+            return "#555";
+        }
+
+        function findDiffDelta(path) {
+            if (diffMap[path] !== undefined) return diffMap[path];
+            var total = 0;
+            var found = false;
+            Object.keys(diffMap).forEach(function(k) {
+                if (k.indexOf(path + "/") === 0 || k === path) {
+                    total += diffMap[k];
+                    found = true;
+                }
+            });
+            return found ? total : 0;
+        }
 
         function getCategoryColor(node) {
             var d = node.data || node;
@@ -177,16 +225,36 @@
         })();
 
         var legendEl = document.getElementById("legend");
-        Object.keys(categoryColors).forEach(function(cat) {
-            var item = document.createElement("div");
-            item.className = "legend-item";
-            var swatch = document.createElement("div");
-            swatch.className = "legend-color";
-            swatch.style.backgroundColor = categoryColors[cat];
-            item.appendChild(swatch);
-            item.appendChild(document.createTextNode(cat));
-            legendEl.appendChild(item);
-        });
+        if (isDiffMode) {
+            var diffLegend = [
+                { label: "増加", color: getDiffColor(1024 * 1024 * 100) },
+                { label: "微増", color: getDiffColor(1024 * 1024) },
+                { label: "変化なし", color: "#555" },
+                { label: "微減", color: getDiffColor(-1024 * 1024) },
+                { label: "減少", color: getDiffColor(-1024 * 1024 * 100) }
+            ];
+            diffLegend.forEach(function(entry) {
+                var item = document.createElement("div");
+                item.className = "legend-item";
+                var swatch = document.createElement("div");
+                swatch.className = "legend-color";
+                swatch.style.backgroundColor = entry.color;
+                item.appendChild(swatch);
+                item.appendChild(document.createTextNode(entry.label));
+                legendEl.appendChild(item);
+            });
+        } else {
+            Object.keys(categoryColors).forEach(function(cat) {
+                var item = document.createElement("div");
+                item.className = "legend-item";
+                var swatch = document.createElement("div");
+                swatch.className = "legend-color";
+                swatch.style.backgroundColor = categoryColors[cat];
+                item.appendChild(swatch);
+                item.appendChild(document.createTextNode(cat));
+                legendEl.appendChild(item);
+            });
+        }
 
         var container = document.getElementById("treemap");
         var breadcrumbEl = document.getElementById("breadcrumb");
@@ -253,7 +321,12 @@
                 div.style.top = leaf.y0 + "px";
                 div.style.width = (leaf.x1 - leaf.x0) + "px";
                 div.style.height = (leaf.y1 - leaf.y0) + "px";
-                div.style.backgroundColor = getCategoryColor(leaf);
+                if (isDiffMode) {
+                    var nodePath = getNodePath(leaf);
+                    div.style.backgroundColor = getDiffColor(findDiffDelta(nodePath));
+                } else {
+                    div.style.backgroundColor = getCategoryColor(leaf);
+                }
 
                 var original = leaf.data;
                 if (original.children && original.children.length > 0) {
@@ -263,11 +336,12 @@
                     });
                 }
 
-                (function(nodeData) {
-                    div.addEventListener("mouseenter", function(e) { showTooltip(e, nodeData); });
+                (function(nodeData, leafNode) {
+                    var delta = isDiffMode ? findDiffDelta(getNodePath(leafNode)) : undefined;
+                    div.addEventListener("mouseenter", function(e) { showTooltip(e, nodeData, delta); });
                     div.addEventListener("mousemove", function(e) { positionTooltip(e); });
                     div.addEventListener("mouseleave", hideTooltip);
-                })(original);
+                })(original, leaf);
 
                 var nodeW = leaf.x1 - leaf.x0;
                 var nodeH = leaf.y1 - leaf.y0;
@@ -299,14 +373,20 @@
         tooltip.style.display = "none";
         document.body.appendChild(tooltip);
 
-        function showTooltip(e, d) {
+        function showTooltip(e, d, diffDelta) {
             var pct = data.total_size > 0 ? (d.size / data.total_size * 100) : 0;
             var pctStr = pct < 0.1 ? "<0.1%" : pct.toFixed(1) + "%";
-            tooltip.innerHTML =
+            var html =
                 '<div class="tt-name">' + d.name + '</div>' +
                 '<div class="tt-row"><span class="tt-label">サイズ</span><span class="tt-value">' + formatSize(d.size) + '</span></div>' +
                 '<div class="tt-row"><span class="tt-label">ファイル数</span><span class="tt-value">' + (d.file_count || 0).toLocaleString() + '</span></div>' +
                 '<div class="tt-row"><span class="tt-label">全体に対する割合</span><span class="tt-value">' + pctStr + '</span></div>';
+            if (isDiffMode && diffDelta !== undefined) {
+                var sign = diffDelta > 0 ? "+" : "";
+                var color = diffDelta > 0 ? "#e94560" : diffDelta < 0 ? "#4a90d9" : "#888";
+                html += '<div class="tt-row"><span class="tt-label">差分</span><span class="tt-value" style="color:' + color + '">' + sign + formatSize(Math.abs(diffDelta)) + '</span></div>';
+            }
+            tooltip.innerHTML = html;
             tooltip.style.display = "block";
             positionTooltip(e);
         }

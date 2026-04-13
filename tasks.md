@@ -130,7 +130,7 @@
  
 - [x] internal/formatter/table.go — FormatDiffTable 関数。増減を +/- 付きで表示、増加は赤系・減少は緑系の ANSI カラー + テスト
 - [x] internal/formatter/json.go — Result に DiffSummary フィールドを追加（optional）。差分モード時のみ値が入る
-- [ ] templates/report.html — 差分モード時にツリーマップの矩形色を「増加=赤、減少=青、変化なし=グレー」のヒートマップに切り替え
+- [x] templates/report.html — 差分モード時にツリーマップの矩形色を「増加=赤、減少=青、変化なし=グレー」のヒートマップに切り替え
  
 ### 7-C: CLI 統合
  
