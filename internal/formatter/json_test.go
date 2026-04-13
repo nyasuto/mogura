@@ -31,27 +31,29 @@ func TestRenderJSON(t *testing.T) {
 		{
 			name: "report with data",
 			report: Report{
-				TotalSize: 1024000,
-				ScannedAt: fixedTime,
+				TotalSize:         1024000,
+				TotalPhysicalSize: 900000,
+				ScannedAt:         fixedTime,
 				DirTree: analyzer.DirNode{
-					Name: "root",
-					Size: 1024000,
+					Name:         "root",
+					Size:         1024000,
+					PhysicalSize: 900000,
 					Children: []analyzer.DirNode{
-						{Name: "src", Size: 512000, FileCount: 10},
-						{Name: "docs", Size: 512000, FileCount: 5},
+						{Name: "src", Size: 512000, PhysicalSize: 450000, FileCount: 10},
+						{Name: "docs", Size: 512000, PhysicalSize: 450000, FileCount: 5},
 					},
 					FileCount: 15,
 				},
 				Extensions: map[string]analyzer.ExtStats{
-					".go": {Size: 512000, Count: 10},
-					".md": {Size: 512000, Count: 5},
+					".go": {Size: 512000, PhysicalSize: 450000, Count: 10},
+					".md": {Size: 512000, PhysicalSize: 450000, Count: 5},
 				},
 				Categories: map[analyzer.Category]analyzer.CategoryStats{
-					analyzer.CategoryCode:     {Size: 512000, Count: 10, Percent: 50.0},
-					analyzer.CategoryDocument: {Size: 512000, Count: 5, Percent: 50.0},
+					analyzer.CategoryCode:     {Size: 512000, PhysicalSize: 450000, Count: 10, Percent: 50.0},
+					analyzer.CategoryDocument: {Size: 512000, PhysicalSize: 450000, Count: 5, Percent: 50.0},
 				},
 				LargestFiles: []internal.FileInfo{
-					{Path: "/root/src/main.go", Size: 102400, Dir: "/root/src", Ext: ".go"},
+					{Path: "/root/src/main.go", Size: 102400, PhysicalSize: 90000, Dir: "/root/src", Ext: ".go"},
 				},
 			},
 		},
@@ -65,13 +67,14 @@ func TestRenderJSON(t *testing.T) {
 				Categories:   map[analyzer.Category]analyzer.CategoryStats{},
 				LargestFiles: []internal.FileInfo{},
 				WasteDirs: []analyzer.WasteDir{
-					{Path: "/root/node_modules", Size: 500000, Kind: "node_modules"},
-					{Path: "/root/.cache", Size: 300000, Kind: "cache"},
+					{Path: "/root/node_modules", Size: 500000, PhysicalSize: 480000, Kind: "node_modules"},
+					{Path: "/root/.cache", Size: 300000, PhysicalSize: 290000, Kind: "cache"},
 				},
 				StaleSummary: &StaleSummary{
-					TotalSize:     200000,
-					TotalFiles:    50,
-					DaysThreshold: 365,
+					TotalSize:         200000,
+					TotalPhysicalSize: 180000,
+					TotalFiles:        50,
+					DaysThreshold:     365,
 				},
 				SavingsEstimate: 1000000,
 			},
@@ -113,6 +116,10 @@ func TestRenderJSON(t *testing.T) {
 				t.Errorf("TotalSize = %d, want %d", parsed.TotalSize, tt.report.TotalSize)
 			}
 
+			if parsed.TotalPhysicalSize != tt.report.TotalPhysicalSize {
+				t.Errorf("TotalPhysicalSize = %d, want %d", parsed.TotalPhysicalSize, tt.report.TotalPhysicalSize)
+			}
+
 			if !parsed.ScannedAt.Equal(tt.report.ScannedAt) {
 				t.Errorf("ScannedAt = %v, want %v", parsed.ScannedAt, tt.report.ScannedAt)
 			}
@@ -138,6 +145,9 @@ func TestRenderJSON(t *testing.T) {
 			} else if parsed.StaleSummary != nil {
 				if parsed.StaleSummary.TotalSize != tt.report.StaleSummary.TotalSize {
 					t.Errorf("StaleSummary.TotalSize = %d, want %d", parsed.StaleSummary.TotalSize, tt.report.StaleSummary.TotalSize)
+				}
+				if parsed.StaleSummary.TotalPhysicalSize != tt.report.StaleSummary.TotalPhysicalSize {
+					t.Errorf("StaleSummary.TotalPhysicalSize = %d, want %d", parsed.StaleSummary.TotalPhysicalSize, tt.report.StaleSummary.TotalPhysicalSize)
 				}
 				if parsed.StaleSummary.TotalFiles != tt.report.StaleSummary.TotalFiles {
 					t.Errorf("StaleSummary.TotalFiles = %d, want %d", parsed.StaleSummary.TotalFiles, tt.report.StaleSummary.TotalFiles)
@@ -167,17 +177,21 @@ func TestRenderJSON(t *testing.T) {
 
 func TestBuildReport_DiffSummary(t *testing.T) {
 	result := analyzer.Result{
-		TotalSize:     1000,
-		ScannedAt:     time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
-		DirSizes:      map[string]analyzer.DirSizeInfo{"/root": {Size: 1000}},
-		ExtStats:      map[string]analyzer.ExtStats{},
-		CategoryStats: map[analyzer.Category]analyzer.CategoryStats{},
+		TotalSize:         1000,
+		TotalPhysicalSize: 800,
+		ScannedAt:         time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+		DirSizes:          map[string]analyzer.DirSizeInfo{"/root": {Size: 1000, PhysicalSize: 800}},
+		ExtStats:          map[string]analyzer.ExtStats{},
+		CategoryStats:     map[analyzer.Category]analyzer.CategoryStats{},
 		DiffSummary: []analyzer.DirDiff{
 			{Path: "/root/a", PrevSize: 100, CurrSize: 300, Delta: 200},
 		},
 	}
 
 	report := buildReport(result)
+	if report.TotalPhysicalSize != 800 {
+		t.Errorf("TotalPhysicalSize = %d, want 800", report.TotalPhysicalSize)
+	}
 	if len(report.DiffSummary) != 1 {
 		t.Fatalf("DiffSummary count = %d, want 1", len(report.DiffSummary))
 	}

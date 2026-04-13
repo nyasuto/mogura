@@ -11,22 +11,24 @@ import (
 )
 
 type StaleSummary struct {
-	TotalSize     int64 `json:"total_size"`
-	TotalFiles    int   `json:"total_files"`
-	DaysThreshold int   `json:"days_threshold"`
+	TotalSize         int64 `json:"total_size"`
+	TotalPhysicalSize int64 `json:"total_physical_size"`
+	TotalFiles        int   `json:"total_files"`
+	DaysThreshold     int   `json:"days_threshold"`
 }
 
 type Report struct {
-	TotalSize       int64                                        `json:"total_size"`
-	ScannedAt       time.Time                                    `json:"scanned_at"`
-	DirTree         analyzer.DirNode                             `json:"dir_tree"`
-	Extensions      map[string]analyzer.ExtStats                 `json:"extensions"`
-	Categories      map[analyzer.Category]analyzer.CategoryStats `json:"categories"`
-	LargestFiles    []internal.FileInfo                          `json:"largest_files"`
-	WasteDirs       []analyzer.WasteDir                          `json:"waste_dirs,omitempty"`
-	StaleSummary    *StaleSummary                                `json:"stale_summary,omitempty"`
-	SavingsEstimate int64                                        `json:"savings_estimate,omitempty"`
-	DiffSummary     []analyzer.DirDiff                           `json:"diff_summary,omitempty"`
+	TotalSize         int64                                        `json:"total_size"`
+	TotalPhysicalSize int64                                        `json:"total_physical_size"`
+	ScannedAt         time.Time                                    `json:"scanned_at"`
+	DirTree           analyzer.DirNode                             `json:"dir_tree"`
+	Extensions        map[string]analyzer.ExtStats                 `json:"extensions"`
+	Categories        map[analyzer.Category]analyzer.CategoryStats `json:"categories"`
+	LargestFiles      []internal.FileInfo                          `json:"largest_files"`
+	WasteDirs         []analyzer.WasteDir                          `json:"waste_dirs,omitempty"`
+	StaleSummary      *StaleSummary                                `json:"stale_summary,omitempty"`
+	SavingsEstimate   int64                                        `json:"savings_estimate,omitempty"`
+	DiffSummary       []analyzer.DirDiff                           `json:"diff_summary,omitempty"`
 }
 
 func RenderJSON(r Report) (string, error) {
@@ -39,17 +41,19 @@ func RenderJSON(r Report) (string, error) {
 
 func buildReport(result analyzer.Result) Report {
 	return Report{
-		TotalSize:    result.TotalSize,
-		ScannedAt:    result.ScannedAt,
-		DirTree:      result.DirTree,
-		Extensions:   result.ExtStats,
-		Categories:   result.CategoryStats,
-		LargestFiles: result.TopFiles,
-		WasteDirs:    result.WasteDirs,
+		TotalSize:         result.TotalSize,
+		TotalPhysicalSize: result.TotalPhysicalSize,
+		ScannedAt:         result.ScannedAt,
+		DirTree:           result.DirTree,
+		Extensions:        result.ExtStats,
+		Categories:        result.CategoryStats,
+		LargestFiles:      result.TopFiles,
+		WasteDirs:         result.WasteDirs,
 		StaleSummary: &StaleSummary{
-			TotalSize:     result.StaleSummary.TotalSize,
-			TotalFiles:    result.StaleSummary.TotalFiles,
-			DaysThreshold: result.OlderThanDays,
+			TotalSize:         result.StaleSummary.TotalSize,
+			TotalPhysicalSize: result.StaleSummary.TotalPhysicalSize,
+			TotalFiles:        result.StaleSummary.TotalFiles,
+			DaysThreshold:     result.OlderThanDays,
 		},
 		SavingsEstimate: result.SavingsEstimate,
 		DiffSummary:     result.DiffSummary,
