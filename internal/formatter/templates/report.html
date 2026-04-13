@@ -12,7 +12,11 @@
         .header h1 { font-size: 1.4rem; color: #e94560; }
         .header .meta { font-size: 0.85rem; color: #888; margin-top: 4px; }
         .container { display: flex; flex-direction: column; padding: 16px 24px; gap: 16px; }
-        #treemap { width: 100%; height: 500px; background: #16213e; border-radius: 8px; overflow: hidden; }
+        #treemap { width: 100%; height: 600px; background: #16213e; border-radius: 8px; overflow: hidden; position: relative; }
+        .treemap-node { position: absolute; overflow: hidden; border: 1px solid rgba(0,0,0,0.3); cursor: default; }
+        .treemap-node .node-label { padding: 4px 6px; font-size: 11px; line-height: 1.3; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); pointer-events: none; }
+        .treemap-node .node-label .node-name { font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .treemap-node .node-label .node-size { font-size: 10px; opacity: 0.85; display: block; }
     </style>
 </head>
 <body>
@@ -25,6 +29,73 @@
     </div>
     <script>
         const data = {{.DataJSON}};
+
+        function formatSize(bytes) {
+            if (bytes >= 1024 * 1024 * 1024 * 1024) return (bytes / (1024 * 1024 * 1024 * 1024)).toFixed(1) + " TB";
+            if (bytes >= 1024 * 1024 * 1024) return (bytes / (1024 * 1024 * 1024)).toFixed(1) + " GB";
+            if (bytes >= 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+            if (bytes >= 1024) return (bytes / 1024).toFixed(1) + " KB";
+            return bytes + " B";
+        }
+
+        var metaEl = document.getElementById("meta");
+        metaEl.textContent = "Total: " + formatSize(data.total_size) + " — Scanned at: " + new Date(data.scanned_at).toLocaleString("ja-JP");
+
+        var colors = d3.scaleOrdinal(d3.schemeTableau10);
+
+        var container = document.getElementById("treemap");
+        var width = container.clientWidth;
+        var height = container.clientHeight;
+
+        var tree = data.dir_tree;
+        if (!tree.children || tree.children.length === 0) {
+            tree.children = [{ name: tree.name, size: tree.size, file_count: tree.file_count }];
+        }
+
+        var root = d3.hierarchy(tree)
+            .sum(function(d) { return d.children && d.children.length > 0 ? 0 : d.size; })
+            .sort(function(a, b) { return b.value - a.value; });
+
+        d3.treemap()
+            .size([width, height])
+            .paddingInner(2)
+            .paddingOuter(2)
+            .round(true)(root);
+
+        var leaves = root.leaves();
+
+        leaves.forEach(function(leaf, i) {
+            var div = document.createElement("div");
+            div.className = "treemap-node";
+            div.style.left = leaf.x0 + "px";
+            div.style.top = leaf.y0 + "px";
+            div.style.width = (leaf.x1 - leaf.x0) + "px";
+            div.style.height = (leaf.y1 - leaf.y0) + "px";
+
+            var colorKey = leaf.parent ? leaf.parent.data.name : leaf.data.name;
+            div.style.backgroundColor = colors(colorKey);
+
+            var nodeW = leaf.x1 - leaf.x0;
+            var nodeH = leaf.y1 - leaf.y0;
+
+            if (nodeW > 30 && nodeH > 20) {
+                var label = document.createElement("div");
+                label.className = "node-label";
+                var nameSpan = document.createElement("span");
+                nameSpan.className = "node-name";
+                nameSpan.textContent = leaf.data.name;
+                label.appendChild(nameSpan);
+                if (nodeH > 35) {
+                    var sizeSpan = document.createElement("span");
+                    sizeSpan.className = "node-size";
+                    sizeSpan.textContent = formatSize(leaf.data.size);
+                    label.appendChild(sizeSpan);
+                }
+                div.appendChild(label);
+            }
+
+            container.appendChild(div);
+        });
     </script>
 </body>
 </html>
