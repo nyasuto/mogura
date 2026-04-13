@@ -178,6 +178,87 @@ func TestScanExclude(t *testing.T) {
 	}
 }
 
+func TestScanExcludeGlob(t *testing.T) {
+	base := t.TempDir()
+
+	dirs := []string{
+		filepath.Join(base, "src"),
+		filepath.Join(base, "build"),
+	}
+	for _, d := range dirs {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	fileMap := map[string]string{
+		filepath.Join(base, "src", "main.go"):   "package main",
+		filepath.Join(base, "src", "util.go"):   "package main",
+		filepath.Join(base, "readme.txt"):       "hello",
+		filepath.Join(base, "notes.tmp"):        "temp",
+		filepath.Join(base, "build", "out.tmp"): "temp2",
+		filepath.Join(base, "build", "app.exe"): "binary",
+		filepath.Join(base, "data.log"):         "log",
+		filepath.Join(base, "src", "debug.log"): "log2",
+	}
+	for p, content := range fileMap {
+		if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	tests := []struct {
+		name      string
+		exclude   []string
+		wantFiles int
+	}{
+		{"glob *.tmp", []string{"*.tmp"}, 6},
+		{"glob *.log", []string{"*.log"}, 6},
+		{"glob and exact", []string{"*.tmp", "build"}, 5},
+		{"glob *.go", []string{"*.go"}, 6},
+		{"multiple globs", []string{"*.tmp", "*.log"}, 4},
+		{"glob with question mark", []string{"?.log"}, 8},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			files, err := Scan(base, ScanOpts{Exclude: tt.exclude})
+			if err != nil {
+				t.Fatalf("Scan() error: %v", err)
+			}
+			if len(files) != tt.wantFiles {
+				names := make([]string, len(files))
+				for i, f := range files {
+					names[i] = filepath.Base(f.Path)
+				}
+				t.Errorf("expected %d files, got %d: %v", tt.wantFiles, len(files), names)
+			}
+		})
+	}
+}
+
+func TestIsGlobPattern(t *testing.T) {
+	tests := []struct {
+		pattern string
+		want    bool
+	}{
+		{"node_modules", false},
+		{".cache", false},
+		{"*.tmp", true},
+		{"file?.log", true},
+		{"[abc].txt", true},
+		{"vendor", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.pattern, func(t *testing.T) {
+			if got := isGlobPattern(tt.pattern); got != tt.want {
+				t.Errorf("isGlobPattern(%q) = %v, want %v", tt.pattern, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestScanNonExistent(t *testing.T) {
 	_, err := Scan("/nonexistent/path/that/does/not/exist")
 	if err == nil {

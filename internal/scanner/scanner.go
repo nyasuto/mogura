@@ -14,6 +14,22 @@ type ScanOpts struct {
 	Exclude []string
 }
 
+func isGlobPattern(pattern string) bool {
+	return strings.ContainsAny(pattern, "*?[")
+}
+
+func matchesExclude(name string, exactSet map[string]bool, globs []string) bool {
+	if exactSet[name] {
+		return true
+	}
+	for _, g := range globs {
+		if matched, _ := filepath.Match(g, name); matched {
+			return true
+		}
+	}
+	return false
+}
+
 func Scan(root string, opts ...ScanOpts) ([]internal.FileInfo, error) {
 	root, err := filepath.Abs(root)
 	if err != nil {
@@ -29,9 +45,14 @@ func Scan(root string, opts ...ScanOpts) ([]internal.FileInfo, error) {
 		opt = opts[0]
 	}
 
-	excludeSet := make(map[string]bool, len(opt.Exclude))
+	exactSet := make(map[string]bool)
+	var globs []string
 	for _, e := range opt.Exclude {
-		excludeSet[e] = true
+		if isGlobPattern(e) {
+			globs = append(globs, e)
+		} else {
+			exactSet[e] = true
+		}
 	}
 
 	var files []internal.FileInfo
@@ -47,9 +68,13 @@ func Scan(root string, opts ...ScanOpts) ([]internal.FileInfo, error) {
 		}
 
 		if d.IsDir() {
-			if path != root && excludeSet[d.Name()] {
+			if path != root && matchesExclude(d.Name(), exactSet, globs) {
 				return filepath.SkipDir
 			}
+			return nil
+		}
+
+		if matchesExclude(d.Name(), exactSet, globs) {
 			return nil
 		}
 
