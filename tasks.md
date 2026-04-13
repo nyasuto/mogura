@@ -152,7 +152,7 @@
  
 ### 8-C: 進捗表示（F6）
  
-- [ ] internal/scanner/scanner.go — ScanOpts に OnProgress func(scanned int, currentDir string) コールバックを追加
+- [x] internal/scanner/scanner.go — ScanOpts に OnProgress func(scanned int, currentDir string) コールバックを追加
 - [ ] internal/app/app.go — stderr に `Scanning... 12345 files (~/Library/Caches)` を 500ms 間隔で表示。`-quiet` フラグで抑制
  
 ### 8-D: マウント境界（F12）

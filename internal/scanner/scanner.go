@@ -11,7 +11,8 @@ import (
 )
 
 type ScanOpts struct {
-	Exclude []string
+	Exclude    []string
+	OnProgress func(scanned int, currentDir string)
 }
 
 func isGlobPattern(pattern string) bool {
@@ -56,6 +57,7 @@ func Scan(root string, opts ...ScanOpts) ([]internal.FileInfo, error) {
 	}
 
 	var files []internal.FileInfo
+	scanned := 0
 
 	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -93,6 +95,11 @@ func Scan(root string, opts ...ScanOpts) ([]internal.FileInfo, error) {
 			Ext:     ext,
 			ModTime: info.ModTime(),
 		})
+		scanned++
+
+		if opt.OnProgress != nil {
+			opt.OnProgress(scanned, filepath.Dir(path))
+		}
 
 		return nil
 	})

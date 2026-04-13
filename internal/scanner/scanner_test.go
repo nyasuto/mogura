@@ -259,6 +259,51 @@ func TestIsGlobPattern(t *testing.T) {
 	}
 }
 
+func TestScanOnProgress(t *testing.T) {
+	base := t.TempDir()
+
+	sub := filepath.Join(base, "sub")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, f := range []string{
+		filepath.Join(base, "a.txt"),
+		filepath.Join(base, "b.txt"),
+		filepath.Join(sub, "c.txt"),
+	} {
+		if err := os.WriteFile(f, []byte("data"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var calls []int
+	var lastDir string
+	files, err := Scan(base, ScanOpts{
+		OnProgress: func(scanned int, currentDir string) {
+			calls = append(calls, scanned)
+			lastDir = currentDir
+		},
+	})
+	if err != nil {
+		t.Fatalf("Scan() error: %v", err)
+	}
+
+	if len(calls) != len(files) {
+		t.Errorf("expected %d progress calls, got %d", len(files), len(calls))
+	}
+
+	for i, v := range calls {
+		if v != i+1 {
+			t.Errorf("call %d: expected scanned=%d, got %d", i, i+1, v)
+		}
+	}
+
+	if lastDir == "" {
+		t.Error("expected lastDir to be set")
+	}
+}
+
 func TestScanNonExistent(t *testing.T) {
 	_, err := Scan("/nonexistent/path/that/does/not/exist")
 	if err == nil {
