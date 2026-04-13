@@ -10,11 +10,12 @@ import (
 )
 
 type SummaryInput struct {
-	TotalSize       int64
-	Categories      map[analyzer.Category]analyzer.CategoryStats
-	WasteDirs       []analyzer.WasteDir
-	Stale           analyzer.StaleResult
-	SavingsEstimate int64
+	TotalSize         int64
+	TotalPhysicalSize int64
+	Categories        map[analyzer.Category]analyzer.CategoryStats
+	WasteDirs         []analyzer.WasteDir
+	Stale             analyzer.StaleResult
+	SavingsEstimate   int64
 }
 
 func RenderSummary(input SummaryInput) string {
@@ -62,11 +63,28 @@ func renderTopCategories(b *strings.Builder, cats map[analyzer.Category]analyzer
 }
 
 func renderWasteSummary(b *strings.Builder, wasteDirs []analyzer.WasteDir) {
-	var total int64
+	var total, totalPhysical int64
 	for _, w := range wasteDirs {
 		total += w.Size
+		totalPhysical += w.PhysicalSize
 	}
-	b.WriteString(fmt.Sprintf("キャッシュ/ゴミ合計: %s\n", internal.FormatSize(total)))
+	if total > 0 && physicalDivergent(total, totalPhysical) {
+		b.WriteString(fmt.Sprintf("キャッシュ/ゴミ合計: %s (実 %s)\n",
+			internal.FormatSize(total), internal.FormatSize(totalPhysical)))
+	} else {
+		b.WriteString(fmt.Sprintf("キャッシュ/ゴミ合計: %s\n", internal.FormatSize(total)))
+	}
+}
+
+func physicalDivergent(logical, physical int64) bool {
+	if logical == 0 {
+		return false
+	}
+	diff := logical - physical
+	if diff < 0 {
+		diff = -diff
+	}
+	return float64(diff)/float64(logical) >= 0.10
 }
 
 func renderStaleSummary(b *strings.Builder, stale analyzer.StaleResult) {
@@ -75,5 +93,19 @@ func renderStaleSummary(b *strings.Builder, stale analyzer.StaleResult) {
 }
 
 func renderSavings(b *strings.Builder, input SummaryInput) {
-	b.WriteString(fmt.Sprintf("\n推定節約可能量: %s\n", internal.FormatSize(input.SavingsEstimate)))
+	b.WriteString(fmt.Sprintf("\n推定節約可能量: %s (物理サイズベース)\n", internal.FormatSize(input.SavingsEstimate)))
+
+	logicalSavings := logicalWasteTotal(input) + input.Stale.TotalSize
+	if logicalSavings > 0 && logicalSavings != input.SavingsEstimate {
+		b.WriteString(fmt.Sprintf("  ※ 論理サイズでは %s ですが、スパースファイル等により実ディスク占有量は異なります\n",
+			internal.FormatSize(logicalSavings)))
+	}
+}
+
+func logicalWasteTotal(input SummaryInput) int64 {
+	var total int64
+	for _, w := range input.WasteDirs {
+		total += w.Size
+	}
+	return total
 }

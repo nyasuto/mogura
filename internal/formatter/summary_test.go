@@ -16,7 +16,8 @@ func TestRenderSummary(t *testing.T) {
 		{
 			name: "全フィールドが表示される",
 			input: SummaryInput{
-				TotalSize: 10 * 1024 * 1024 * 1024,
+				TotalSize:         10 * 1024 * 1024 * 1024,
+				TotalPhysicalSize: 10 * 1024 * 1024 * 1024,
 				Categories: map[analyzer.Category]analyzer.CategoryStats{
 					analyzer.CategoryVideo:    {Size: 5 * 1024 * 1024 * 1024, Count: 10, Percent: 50.0},
 					analyzer.CategoryImage:    {Size: 2 * 1024 * 1024 * 1024, Count: 100, Percent: 20.0},
@@ -26,12 +27,13 @@ func TestRenderSummary(t *testing.T) {
 					analyzer.CategoryArchive:  {Size: 128 * 1024 * 1024, Count: 5, Percent: 1.25},
 				},
 				WasteDirs: []analyzer.WasteDir{
-					{Path: "/project/node_modules", Size: 300 * 1024 * 1024, Kind: "node_modules"},
-					{Path: "/project/.cache", Size: 100 * 1024 * 1024, Kind: "cache"},
+					{Path: "/project/node_modules", Size: 300 * 1024 * 1024, PhysicalSize: 300 * 1024 * 1024, Kind: "node_modules"},
+					{Path: "/project/.cache", Size: 100 * 1024 * 1024, PhysicalSize: 100 * 1024 * 1024, Kind: "cache"},
 				},
 				Stale: analyzer.StaleResult{
-					TotalSize:  500 * 1024 * 1024,
-					TotalFiles: 42,
+					TotalSize:         500 * 1024 * 1024,
+					TotalPhysicalSize: 500 * 1024 * 1024,
+					TotalFiles:        42,
 				},
 				SavingsEstimate: 900 * 1024 * 1024,
 			},
@@ -45,7 +47,7 @@ func TestRenderSummary(t *testing.T) {
 				"キャッシュ",
 				"キャッシュ/ゴミ合計: 400.0 MB",
 				"古いファイル合計: 500.0 MB (42 件)",
-				"推定節約可能量: 900.0 MB",
+				"推定節約可能量: 900.0 MB (物理サイズベース)",
 			},
 		},
 		{
@@ -60,7 +62,7 @@ func TestRenderSummary(t *testing.T) {
 			contains: []string{
 				"総容量: 1.0 KB",
 				"コード",
-				"推定節約可能量: 0 B",
+				"推定節約可能量: 0 B (物理サイズベース)",
 			},
 		},
 		{
@@ -87,7 +89,28 @@ func TestRenderSummary(t *testing.T) {
 			input: SummaryInput{},
 			contains: []string{
 				"総容量: 0 B",
-				"推定節約可能量: 0 B",
+				"推定節約可能量: 0 B (物理サイズベース)",
+			},
+		},
+		{
+			name: "スパース乖離時に論理サイズとの差を注記",
+			input: SummaryInput{
+				TotalSize:         100 * 1024 * 1024 * 1024,
+				TotalPhysicalSize: 10 * 1024 * 1024 * 1024,
+				WasteDirs: []analyzer.WasteDir{
+					{Path: "/vm/disk.raw", Size: 90 * 1024 * 1024 * 1024, PhysicalSize: 5 * 1024 * 1024 * 1024, Kind: "cache"},
+				},
+				Stale: analyzer.StaleResult{
+					TotalSize:         10 * 1024 * 1024 * 1024,
+					TotalPhysicalSize: 1 * 1024 * 1024 * 1024,
+				},
+				SavingsEstimate: 6 * 1024 * 1024 * 1024,
+			},
+			contains: []string{
+				"推定節約可能量: 6.0 GB (物理サイズベース)",
+				"論理サイズでは 100.0 GB",
+				"スパースファイル等により実ディスク占有量は異なります",
+				"キャッシュ/ゴミ合計: 90.0 GB (実 5.0 GB)",
 			},
 		},
 	}

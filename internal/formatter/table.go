@@ -235,11 +235,12 @@ func FormatTable(result analyzer.Result, w io.Writer) {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "=== サマリ ===")
 	summary := RenderSummary(SummaryInput{
-		TotalSize:       result.TotalSize,
-		Categories:      result.CategoryStats,
-		WasteDirs:       result.WasteDirs,
-		Stale:           result.StaleSummary,
-		SavingsEstimate: result.SavingsEstimate,
+		TotalSize:         result.TotalSize,
+		TotalPhysicalSize: result.TotalPhysicalSize,
+		Categories:        result.CategoryStats,
+		WasteDirs:         result.WasteDirs,
+		Stale:             result.StaleSummary,
+		SavingsEstimate:   result.SavingsEstimate,
 	})
 	fmt.Fprint(w, summary)
 }
