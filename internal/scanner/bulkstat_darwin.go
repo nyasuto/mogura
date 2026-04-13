@@ -73,6 +73,46 @@ func newBulkAttrList() darwinAttrList {
 	}
 }
 
+func readDirBulk(path string) ([]bulkEntry, error) {
+	fd, err := unix.Open(path, unix.O_RDONLY|unix.O_DIRECTORY, 0)
+	if err != nil {
+		return nil, err
+	}
+	defer unix.Close(fd)
+
+	attrList := newBulkAttrList()
+	buf := make([]byte, _bulkBufSize)
+	var entries []bulkEntry
+
+	for {
+		n, err := callGetattrlistbulk(fd, &attrList, buf)
+		if err != nil {
+			return entries, err
+		}
+		if n == 0 {
+			break
+		}
+
+		offset := 0
+		for i := 0; i < n; i++ {
+			if offset+4 > len(buf) {
+				break
+			}
+			recLen := int(binary.LittleEndian.Uint32(buf[offset : offset+4]))
+			if recLen < 4 || offset+recLen > len(buf) {
+				break
+			}
+			entry, ok := parseRecord(buf[offset : offset+recLen])
+			if ok {
+				entries = append(entries, entry)
+			}
+			offset += recLen
+		}
+	}
+
+	return entries, nil
+}
+
 func parseRecord(rec []byte) (bulkEntry, bool) {
 	// record layout (fixed part):
 	//   [0:4]   uint32  record length
