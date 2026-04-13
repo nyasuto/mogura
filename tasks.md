@@ -134,7 +134,7 @@
  
 ### 7-C: CLI 統合
  
-- [ ] internal/app/app.go — Config に DiffPath string を追加。`-diff prev.json` で前回 JSON を読み込み ComputeDiff を呼ぶ
+- [x] internal/app/app.go — Config に DiffPath string を追加。`-diff prev.json` で前回 JSON を読み込み ComputeDiff を呼ぶ
 - [ ] README.md に差分モードのワークフロー（`mogura --json ~ > snap.json` → 後日 `mogura --diff snap.json ~`）を追記
  
 ## Phase 8: CLI 磨き込み

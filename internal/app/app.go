@@ -28,6 +28,7 @@ type Config struct {
 	OutputFormat  OutputFormat
 	Exclude       []string
 	OlderThanDays int
+	DiffPath      string
 }
 
 func ParseFlags(args []string) (Config, error) {
@@ -40,6 +41,7 @@ func ParseFlags(args []string) (Config, error) {
 	top := fs.Int("top", 20, "巨大ファイル表示件数")
 	olderThan := fs.Int("older-than", 365, "古いファイルの判定日数")
 	exclude := fs.String("exclude", "", "除外パターン（カンマ区切り: node_modules,.git,*.tmp）")
+	diffPath := fs.String("diff", "", "前回の JSON レポートファイルと差分比較")
 
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "usage: mogura [flags] <path>\n")
@@ -81,6 +83,7 @@ func ParseFlags(args []string) (Config, error) {
 		OutputFormat:  format,
 		Exclude:       excludes,
 		OlderThanDays: *olderThan,
+		DiffPath:      *diffPath,
 	}, nil
 }
 
@@ -99,6 +102,26 @@ func Run(cfg Config, stdout io.Writer, stderr io.Writer) error {
 		OlderThanDays: cfg.OlderThanDays,
 		Now:           now,
 	})
+
+	if cfg.DiffPath != "" {
+		prev, err := analyzer.LoadPrevResult(cfg.DiffPath)
+		if err != nil {
+			return err
+		}
+		diffs := analyzer.ComputeDiff(prev, result)
+		result.DiffSummary = diffs
+
+		switch cfg.OutputFormat {
+		case FormatJSON:
+			return formatter.FormatJSON(result, stdout)
+		case FormatHTML:
+			return formatter.FormatHTML(result, stdout)
+		default:
+			fmt.Fprintln(stdout, "=== 差分 ===")
+			formatter.FormatDiffTable(diffs, stdout, 20)
+		}
+		return nil
+	}
 
 	switch cfg.OutputFormat {
 	case FormatJSON:
