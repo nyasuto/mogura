@@ -147,7 +147,7 @@
 ### 8-B: フィルタ（F7）
  
 - [x] internal/app/app.go — Config に MinSize int64, FilterExt []string を追加
-- [ ] internal/app/app.go — スキャン結果に対して MinSize / FilterExt でフィルタリングする関数。Analyze の前段で適用 + テスト
+- [x] internal/app/app.go — スキャン結果に対して MinSize / FilterExt でフィルタリングする関数。Analyze の前段で適用 + テスト
 - [ ] flags — `-min-size 10M`（human-readable パース）、`-ext mp4,mkv` フラグを追加
  
 ### 8-C: 進捗表示（F6）

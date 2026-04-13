@@ -6,6 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	"mogura/internal"
 )
 
 func setupTmpDir(t *testing.T) string {
@@ -125,6 +128,85 @@ func TestRun_InvalidPath(t *testing.T) {
 	err := Run(cfg, &stdout, &stderr)
 	if err == nil {
 		t.Error("expected error for invalid path")
+	}
+}
+
+func TestFilterFiles(t *testing.T) {
+	now := time.Now()
+	files := []internal.FileInfo{
+		{Path: "/a/small.txt", Size: 100, Ext: ".txt", ModTime: now},
+		{Path: "/a/big.txt", Size: 10000, Ext: ".txt", ModTime: now},
+		{Path: "/a/photo.jpg", Size: 5000, Ext: ".jpg", ModTime: now},
+		{Path: "/a/video.mp4", Size: 20000, Ext: ".mp4", ModTime: now},
+		{Path: "/a/noext", Size: 300, Ext: "", ModTime: now},
+	}
+
+	tests := []struct {
+		name      string
+		minSize   int64
+		filterExt []string
+		wantCount int
+		wantPaths []string
+	}{
+		{
+			name:      "no filter",
+			minSize:   0,
+			filterExt: nil,
+			wantCount: 5,
+		},
+		{
+			name:      "min size only",
+			minSize:   5000,
+			filterExt: nil,
+			wantCount: 3,
+			wantPaths: []string{"/a/big.txt", "/a/photo.jpg", "/a/video.mp4"},
+		},
+		{
+			name:      "ext filter only",
+			minSize:   0,
+			filterExt: []string{"txt"},
+			wantCount: 2,
+			wantPaths: []string{"/a/small.txt", "/a/big.txt"},
+		},
+		{
+			name:      "ext filter with dot prefix",
+			minSize:   0,
+			filterExt: []string{".jpg", ".mp4"},
+			wantCount: 2,
+			wantPaths: []string{"/a/photo.jpg", "/a/video.mp4"},
+		},
+		{
+			name:      "both filters",
+			minSize:   10000,
+			filterExt: []string{"txt", "mp4"},
+			wantCount: 2,
+			wantPaths: []string{"/a/big.txt", "/a/video.mp4"},
+		},
+		{
+			name:      "no matches",
+			minSize:   100000,
+			filterExt: nil,
+			wantCount: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := FilterFiles(files, tt.minSize, tt.filterExt)
+			if len(got) != tt.wantCount {
+				t.Errorf("got %d files, want %d", len(got), tt.wantCount)
+			}
+			if tt.wantPaths != nil {
+				for i, want := range tt.wantPaths {
+					if i >= len(got) {
+						break
+					}
+					if got[i].Path != want {
+						t.Errorf("got[%d].Path = %q, want %q", i, got[i].Path, want)
+					}
+				}
+			}
+		})
 	}
 }
 

@@ -4,9 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"mogura/internal"
 	"mogura/internal/analyzer"
 	"mogura/internal/formatter"
 	"mogura/internal/scanner"
@@ -89,6 +91,33 @@ func ParseFlags(args []string) (Config, error) {
 	}, nil
 }
 
+func FilterFiles(files []internal.FileInfo, minSize int64, filterExt []string) []internal.FileInfo {
+	if minSize == 0 && len(filterExt) == 0 {
+		return files
+	}
+
+	extSet := make(map[string]bool, len(filterExt))
+	for _, e := range filterExt {
+		ext := strings.ToLower(e)
+		if !strings.HasPrefix(ext, ".") {
+			ext = "." + ext
+		}
+		extSet[ext] = true
+	}
+
+	filtered := make([]internal.FileInfo, 0, len(files))
+	for _, f := range files {
+		if minSize > 0 && f.Size < minSize {
+			continue
+		}
+		if len(extSet) > 0 && !extSet[strings.ToLower(filepath.Ext(f.Path))] {
+			continue
+		}
+		filtered = append(filtered, f)
+	}
+	return filtered
+}
+
 func Run(cfg Config, stdout io.Writer, stderr io.Writer) error {
 	files, err := scanner.Scan(cfg.TargetPath, scanner.ScanOpts{
 		Exclude: cfg.Exclude,
@@ -96,6 +125,8 @@ func Run(cfg Config, stdout io.Writer, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
+
+	files = FilterFiles(files, cfg.MinSize, cfg.FilterExt)
 
 	now := time.Now()
 	result := analyzer.Analyze(files, analyzer.AnalyzeOpts{
