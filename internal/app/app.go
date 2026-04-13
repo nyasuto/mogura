@@ -45,6 +45,7 @@ type Config struct {
 	OneFileSystem bool
 	SizeMode      SizeMode
 	Workers       int
+	UseBulkStat   *bool
 }
 
 func ParseFlags(args []string) (Config, error) {
@@ -64,6 +65,7 @@ func ParseFlags(args []string) (Config, error) {
 	oneFS := fs.Bool("x", false, "ファイルシステム境界を越えない")
 	sizeMode := fs.String("size-mode", "logical", "サイズ表示モード（logical / physical）")
 	workers := fs.Int("workers", 0, "並列 walk の worker 数（デフォルト: CPU コア数）")
+	bulkstat := fs.Bool("bulkstat", true, "getattrlistbulk を使用する（darwin のみ有効、false で os.ReadDir+Lstat にフォールバック）")
 
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "usage: mogura [flags] <path>\n")
@@ -135,6 +137,7 @@ func ParseFlags(args []string) (Config, error) {
 		OneFileSystem: *oneFS,
 		SizeMode:      sm,
 		Workers:       *workers,
+		UseBulkStat:   bulkstat,
 	}, nil
 }
 
@@ -223,6 +226,7 @@ func Run(cfg Config, stdout io.Writer, stderr io.Writer) error {
 		Exclude:       cfg.Exclude,
 		OneFileSystem: cfg.OneFileSystem,
 		Workers:       cfg.Workers,
+		UseBulkStat:   cfg.UseBulkStat,
 	}
 
 	if !cfg.Quiet {

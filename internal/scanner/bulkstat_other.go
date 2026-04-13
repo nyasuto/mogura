@@ -60,3 +60,7 @@ func readDirBulk(dirPath string) ([]bulkEntry, error) {
 
 	return entries, nil
 }
+
+func readDirFallback(dirPath string) ([]bulkEntry, error) {
+	return readDirBulk(dirPath)
+}

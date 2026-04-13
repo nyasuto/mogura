@@ -4,6 +4,9 @@ package scanner
 
 import (
 	"encoding/binary"
+	"os"
+	"path/filepath"
+	"syscall"
 	"time"
 	"unsafe"
 
@@ -170,4 +173,47 @@ func parseRecord(rec []byte) (bulkEntry, bool) {
 	}
 
 	return entry, true
+}
+
+func readDirFallback(dirPath string) ([]bulkEntry, error) {
+	dirEntries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	entries := make([]bulkEntry, 0, len(dirEntries))
+	for _, de := range dirEntries {
+		typ := de.Type()
+		isSymlink := typ&os.ModeSymlink != 0
+
+		entry := bulkEntry{
+			Name:      de.Name(),
+			IsDir:     de.IsDir(),
+			IsSymlink: isSymlink,
+		}
+
+		if isSymlink {
+			entries = append(entries, entry)
+			continue
+		}
+
+		fullPath := filepath.Join(dirPath, de.Name())
+		info, infoErr := os.Lstat(fullPath)
+		if infoErr != nil {
+			continue
+		}
+		entry.ModTime = info.ModTime()
+
+		if !de.IsDir() {
+			entry.Size = info.Size()
+			entry.PhysicalSize = info.Size()
+			if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+				entry.PhysicalSize = stat.Blocks * 512
+			}
+		}
+
+		entries = append(entries, entry)
+	}
+
+	return entries, nil
 }

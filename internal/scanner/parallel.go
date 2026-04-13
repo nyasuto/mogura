@@ -138,8 +138,15 @@ func (ps *parallelScanner) enqueue(path string) {
 	ps.pendingCh <- dirTask{path: path}
 }
 
+func (ps *parallelScanner) readDir(path string) ([]bulkEntry, error) {
+	if ps.opts.UseBulkStat != nil && !*ps.opts.UseBulkStat {
+		return readDirFallback(path)
+	}
+	return readDirBulk(path)
+}
+
 func (ps *parallelScanner) processDir(task dirTask) {
-	entries, err := readDirBulk(task.path)
+	entries, err := ps.readDir(task.path)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "warning: %s: %v\n", task.path, err)
 		return

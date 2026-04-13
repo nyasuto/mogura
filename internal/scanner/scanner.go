@@ -15,6 +15,7 @@ type ScanOpts struct {
 	OnProgress    func(scanned int, currentDir string)
 	OneFileSystem bool
 	Workers       int
+	UseBulkStat   *bool
 }
 
 func deviceID(path string) (uint64, error) {
