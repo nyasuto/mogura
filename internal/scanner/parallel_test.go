@@ -107,7 +107,7 @@ func TestParallelPermissionError(t *testing.T) {
 	if err := os.MkdirAll(noRead, 0o000); err != nil {
 		t.Fatal(err)
 	}
-	defer os.Chmod(noRead, 0o755)
+	defer os.Chmod(noRead, 0o755) //nolint:errcheck
 
 	files, err := Scan(base, ScanOpts{Workers: 4})
 	if err != nil {

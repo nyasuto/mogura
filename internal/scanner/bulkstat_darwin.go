@@ -81,7 +81,7 @@ func readDirBulk(path string) ([]bulkEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer unix.Close(fd)
+	defer unix.Close(fd) //nolint:errcheck
 
 	attrList := newBulkAttrList()
 	buf := make([]byte, _bulkBufSize)

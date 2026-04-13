@@ -1,0 +1,33 @@
+version: "2"
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell
+  settings:
+    errcheck:
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+    staticcheck:
+      checks:
+        - "all"
+        - "-SA1019"
+        - "-QF*"
+        - "-ST1000"
+        - "-ST1003"
+  exclusions:
+    rules:
+      - linters:
+          - errcheck
+        path: _test\.go
+
+formatters:
+  exclusions:
+    paths:
+      - vendor

@@ -20,6 +20,9 @@ fmt:
 		echo "gofmt found unformatted files"; exit 1; \
 	fi
 
+lint:
+	golangci-lint run ./...
+
 quality: vet fmt test
 
 clean:

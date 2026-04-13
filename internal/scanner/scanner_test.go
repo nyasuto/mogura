@@ -111,7 +111,7 @@ func TestScanPermissionError(t *testing.T) {
 	if err := os.MkdirAll(noRead, 0o000); err != nil {
 		t.Fatal(err)
 	}
-	defer os.Chmod(noRead, 0o755)
+	defer os.Chmod(noRead, 0o755) //nolint:errcheck
 
 	if err := os.WriteFile(filepath.Join(base, "ok.txt"), []byte("ok"), 0o644); err != nil {
 		t.Fatal(err)

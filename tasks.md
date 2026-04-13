@@ -249,9 +249,9 @@
 
 ### 11-B: golangci-lint 導入（任意・品質ゲート強化）
 
-- [ ] `.golangci.yml` を作成。有効化する linter は errcheck / govet / ineffassign / staticcheck / unused / gosimple / misspell あたりから開始。厳しすぎると PR が通らないので段階導入
-- [ ] `.github/workflows/ci.yml` に golangci-lint ジョブを追加（`golangci/golangci-lint-action@v6` 公式アクション使用）
-- [ ] ローカルでも `make lint` ターゲットを Makefile に追加（CI と同じ設定で走るように）
+- [x] `.golangci.yml` を作成。有効化する linter は errcheck / govet / ineffassign / staticcheck / unused / gosimple / misspell あたりから開始。厳しすぎると PR が通らないので段階導入
+- [x] `.github/workflows/ci.yml` に golangci-lint ジョブを追加（`golangci/golangci-lint-action@v6` 公式アクション使用）
+- [x] ローカルでも `make lint` ターゲットを Makefile に追加（CI と同じ設定で走るように）
 
 ### 11-C: リリースワークフロー（タグ駆動）
 

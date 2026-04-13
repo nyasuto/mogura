@@ -21,3 +21,16 @@ jobs:
       - run: test -z "$(gofmt -l ./...)"
       - run: go test -race ./...
       - run: go build ./...
+
+  lint:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: golangci/golangci-lint-action@v6
