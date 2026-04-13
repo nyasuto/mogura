@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"time"
@@ -14,25 +13,13 @@ import (
 )
 
 func main() {
-	jsonFlag := flag.Bool("json", false, "JSON 形式で出力")
-	treeFlag := flag.Bool("tree", false, "ツリー形式で出力")
-	depth := flag.Int("depth", 3, "ツリー表示の深さ")
-	top := flag.Int("top", 20, "巨大ファイル表示件数")
-	olderThan := flag.Int("older-than", 365, "古いファイルの判定日数")
-	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: mogura [flags] <path>")
-		flag.PrintDefaults()
-	}
-	flag.Parse()
-
-	if flag.NArg() < 1 {
-		flag.Usage()
+	cfg, err := app.ParseFlags(os.Args[1:])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 
-	root := flag.Arg(0)
-
-	_ = app.Run // 後続タスクで使用
+	root := cfg.TargetPath
 
 	files, err := scanner.Scan(root)
 	if err != nil {
@@ -48,7 +35,7 @@ func main() {
 	now := time.Now()
 	wasteDirs := analyzer.DetectWaste(files)
 	wasteDirs = append(wasteDirs, analyzer.DetectLargeGitDirs(files, 100*1024*1024)...)
-	staleResult := analyzer.DetectStale(files, *olderThan, now)
+	staleResult := analyzer.DetectStale(files, cfg.OlderThanDays, now)
 	catStats := analyzer.AggregateByCategory(files)
 
 	var wasteTotal int64
@@ -57,19 +44,19 @@ func main() {
 	}
 	savingsEstimate := wasteTotal + staleResult.TotalSize
 
-	switch {
-	case *jsonFlag:
+	switch cfg.OutputFormat {
+	case app.FormatJSON:
 		tree := analyzer.BuildTree(files)
-		tree = analyzer.Prune(tree, *depth)
+		tree = analyzer.Prune(tree, cfg.Depth)
 		report := formatter.Report{
 			TotalSize:       totalSize,
 			ScannedAt:       now,
 			DirTree:         tree,
 			Extensions:      analyzer.AggregateByExt(files),
 			Categories:      catStats,
-			LargestFiles:    analyzer.TopNFiles(files, *top),
+			LargestFiles:    analyzer.TopNFiles(files, cfg.TopN),
 			WasteDirs:       wasteDirs,
-			StaleSummary:    &formatter.StaleSummary{TotalSize: staleResult.TotalSize, TotalFiles: staleResult.TotalFiles, DaysThreshold: *olderThan},
+			StaleSummary:    &formatter.StaleSummary{TotalSize: staleResult.TotalSize, TotalFiles: staleResult.TotalFiles, DaysThreshold: cfg.OlderThanDays},
 			SavingsEstimate: savingsEstimate,
 		}
 		out, err := formatter.RenderJSON(report)
@@ -79,9 +66,9 @@ func main() {
 		}
 		fmt.Println(out)
 
-	case *treeFlag:
+	case app.FormatTree:
 		tree := analyzer.BuildTree(files)
-		tree = analyzer.Prune(tree, *depth)
+		tree = analyzer.Prune(tree, cfg.Depth)
 		fmt.Print(formatter.RenderTree(tree))
 
 	default:
@@ -101,8 +88,8 @@ func main() {
 		formatter.PrintCategoryTable(os.Stdout, catStats)
 
 		fmt.Println()
-		fmt.Printf("=== 巨大ファイル Top %d ===\n", *top)
-		topFiles := analyzer.TopNFiles(files, *top)
+		fmt.Printf("=== 巨大ファイル Top %d ===\n", cfg.TopN)
+		topFiles := analyzer.TopNFiles(files, cfg.TopN)
 		formatter.PrintTopFiles(os.Stdout, topFiles)
 
 		fmt.Println()
