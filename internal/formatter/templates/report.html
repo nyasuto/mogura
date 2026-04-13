@@ -13,6 +13,9 @@
         .header .meta { font-size: 0.85rem; color: #888; margin-top: 4px; }
         .container { display: flex; flex-direction: column; padding: 16px 24px; gap: 16px; }
         #treemap { width: 100%; height: 600px; background: #16213e; border-radius: 8px; overflow: hidden; position: relative; }
+        .legend { display: flex; flex-wrap: wrap; gap: 12px; padding: 8px 0; }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+        .legend-color { width: 14px; height: 14px; border-radius: 3px; }
         .treemap-node { position: absolute; overflow: hidden; border: 1px solid rgba(0,0,0,0.3); cursor: default; }
         .treemap-node .node-label { padding: 4px 6px; font-size: 11px; line-height: 1.3; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); pointer-events: none; }
         .treemap-node .node-label .node-name { font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -25,6 +28,7 @@
         <div class="meta" id="meta"></div>
     </div>
     <div class="container">
+        <div class="legend" id="legend"></div>
         <div id="treemap"></div>
     </div>
     <script>
@@ -41,7 +45,35 @@
         var metaEl = document.getElementById("meta");
         metaEl.textContent = "Total: " + formatSize(data.total_size) + " — Scanned at: " + new Date(data.scanned_at).toLocaleString("ja-JP");
 
-        var colors = d3.scaleOrdinal(d3.schemeTableau10);
+        var categoryColors = {
+            "動画": "#e94560",
+            "画像": "#f5a623",
+            "コード": "#50c878",
+            "ドキュメント": "#4a90d9",
+            "キャッシュ": "#9b59b6",
+            "アーカイブ": "#e67e22",
+            "その他": "#7f8c8d"
+        };
+
+        function getCategoryColor(node) {
+            var d = node.data || node;
+            if (d.dominant_category && categoryColors[d.dominant_category]) {
+                return categoryColors[d.dominant_category];
+            }
+            return categoryColors["その他"];
+        }
+
+        var legendEl = document.getElementById("legend");
+        Object.keys(categoryColors).forEach(function(cat) {
+            var item = document.createElement("div");
+            item.className = "legend-item";
+            var swatch = document.createElement("div");
+            swatch.className = "legend-color";
+            swatch.style.backgroundColor = categoryColors[cat];
+            item.appendChild(swatch);
+            item.appendChild(document.createTextNode(cat));
+            legendEl.appendChild(item);
+        });
 
         var container = document.getElementById("treemap");
         var width = container.clientWidth;
@@ -72,8 +104,7 @@
             div.style.width = (leaf.x1 - leaf.x0) + "px";
             div.style.height = (leaf.y1 - leaf.y0) + "px";
 
-            var colorKey = leaf.parent ? leaf.parent.data.name : leaf.data.name;
-            div.style.backgroundColor = colors(colorKey);
+            div.style.backgroundColor = getCategoryColor(leaf);
 
             var nodeW = leaf.x1 - leaf.x0;
             var nodeH = leaf.y1 - leaf.y0;

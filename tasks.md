@@ -103,7 +103,7 @@
 ### 6-B: ツリーマップ描画
  
 - [x] templates/report.html — D3.js treemap レイアウトの実装。DirTree の children を d3.hierarchy → d3.treemap で矩形配置。各矩形にディレクトリ名とサイズを表示
-- [ ] templates/report.html — カテゴリ別の色分け。ディレクトリ内の支配的なカテゴリ（動画/画像/コード等）で矩形の背景色を変える
+- [x] templates/report.html — カテゴリ別の色分け。ディレクトリ内の支配的なカテゴリ（動画/画像/コード等）で矩形の背景色を変える
 - [ ] templates/report.html — クリックでドリルダウン。矩形をクリックするとそのディレクトリを新しいルートとしてツリーマップを再描画。パンくずリストで階層を表示
 - [ ] templates/report.html — ホバー時にツールチップ。ディレクトリ名、サイズ（human-readable）、ファイル数、全体に対する割合を表示
  

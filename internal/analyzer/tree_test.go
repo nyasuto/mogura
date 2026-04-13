@@ -224,6 +224,31 @@ func TestPrunePreservesOriginal(t *testing.T) {
 	}
 }
 
+func TestBuildTreeDominantCategory(t *testing.T) {
+	files := []internal.FileInfo{
+		{Path: "/root/a.mp4", Size: 500, Dir: "/root", Ext: ".mp4"},
+		{Path: "/root/b.txt", Size: 100, Dir: "/root", Ext: ".txt"},
+		{Path: "/root/sub/c.go", Size: 300, Dir: "/root/sub", Ext: ".go"},
+		{Path: "/root/sub/d.go", Size: 200, Dir: "/root/sub", Ext: ".go"},
+	}
+
+	got := BuildTree(files)
+	if got.DominantCategory != "動画" {
+		t.Errorf("root DominantCategory = %q, want %q", got.DominantCategory, "動画")
+	}
+
+	var sub DirNode
+	for _, c := range got.Children {
+		if c.Name == "sub" {
+			sub = c
+			break
+		}
+	}
+	if sub.DominantCategory != "コード" {
+		t.Errorf("sub DominantCategory = %q, want %q", sub.DominantCategory, "コード")
+	}
+}
+
 func TestBuildTreeSizeAggregation(t *testing.T) {
 	files := []internal.FileInfo{
 		{Path: "/a/x.txt", Size: 100, Dir: "/a"},
