@@ -2,11 +2,16 @@ package formatter
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
 	"mogura/internal"
 	"mogura/internal/analyzer"
 )
+
+func FormatTree(result analyzer.Result, w io.Writer) {
+	fmt.Fprint(w, RenderTree(result.DirTree))
+}
 
 func RenderTree(node analyzer.DirNode) string {
 	var b strings.Builder

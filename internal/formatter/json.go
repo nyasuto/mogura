@@ -2,6 +2,8 @@ package formatter
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"time"
 
 	"mogura/internal"
@@ -32,4 +34,34 @@ func RenderJSON(r Report) (string, error) {
 		return "", err
 	}
 	return string(b), nil
+}
+
+func FormatJSON(result analyzer.Result, w io.Writer) error {
+	var wasteTotal int64
+	for _, wd := range result.WasteDirs {
+		wasteTotal += wd.Size
+	}
+
+	report := Report{
+		TotalSize:    result.TotalSize,
+		ScannedAt:    result.ScannedAt,
+		DirTree:      result.DirTree,
+		Extensions:   result.ExtStats,
+		Categories:   result.CategoryStats,
+		LargestFiles: result.TopFiles,
+		WasteDirs:    result.WasteDirs,
+		StaleSummary: &StaleSummary{
+			TotalSize:     result.StaleSummary.TotalSize,
+			TotalFiles:    result.StaleSummary.TotalFiles,
+			DaysThreshold: result.OlderThanDays,
+		},
+		SavingsEstimate: wasteTotal + result.StaleSummary.TotalSize,
+	}
+
+	out, err := RenderJSON(report)
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintln(w, out)
+	return err
 }

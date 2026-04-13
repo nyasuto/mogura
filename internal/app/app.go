@@ -6,7 +6,6 @@ import (
 	"io"
 	"time"
 
-	"mogura/internal"
 	"mogura/internal/analyzer"
 	"mogura/internal/formatter"
 	"mogura/internal/scanner"
@@ -84,61 +83,13 @@ func Run(cfg Config, stdout io.Writer, stderr io.Writer) error {
 		Now:           now,
 	})
 
-	var wasteTotal int64
-	for _, w := range result.WasteDirs {
-		wasteTotal += w.Size
-	}
-	savingsEstimate := wasteTotal + result.StaleSummary.TotalSize
-
 	switch cfg.OutputFormat {
 	case FormatJSON:
-		report := formatter.Report{
-			TotalSize:       result.TotalSize,
-			ScannedAt:       now,
-			DirTree:         result.DirTree,
-			Extensions:      result.ExtStats,
-			Categories:      result.CategoryStats,
-			LargestFiles:    result.TopFiles,
-			WasteDirs:       result.WasteDirs,
-			StaleSummary:    &formatter.StaleSummary{TotalSize: result.StaleSummary.TotalSize, TotalFiles: result.StaleSummary.TotalFiles, DaysThreshold: cfg.OlderThanDays},
-			SavingsEstimate: savingsEstimate,
-		}
-		out, err := formatter.RenderJSON(report)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintln(stdout, out)
-
+		return formatter.FormatJSON(result, stdout)
 	case FormatTree:
-		fmt.Fprint(stdout, formatter.RenderTree(result.DirTree))
-
+		formatter.FormatTree(result, stdout)
 	default:
-		fmt.Fprintf(stdout, "Total: %s (%d files)\n\n", internal.FormatSize(result.TotalSize), len(files))
-
-		fmt.Fprintln(stdout, "=== ディレクトリ別 Top 10 ===")
-		formatter.PrintDirTable(stdout, result.DirSizes, 10)
-
-		fmt.Fprintln(stdout)
-		fmt.Fprintln(stdout, "=== 拡張子別 Top 10 ===")
-		formatter.PrintExtTable(stdout, result.ExtStats, 10)
-
-		fmt.Fprintln(stdout)
-		fmt.Fprintln(stdout, "=== カテゴリ別内訳 ===")
-		formatter.PrintCategoryTable(stdout, result.CategoryStats)
-
-		fmt.Fprintln(stdout)
-		fmt.Fprintf(stdout, "=== 巨大ファイル Top %d ===\n", cfg.TopN)
-		formatter.PrintTopFiles(stdout, result.TopFiles)
-
-		fmt.Fprintln(stdout)
-		fmt.Fprintln(stdout, "=== サマリ ===")
-		summary := formatter.RenderSummary(formatter.SummaryInput{
-			TotalSize:  result.TotalSize,
-			Categories: result.CategoryStats,
-			WasteDirs:  result.WasteDirs,
-			Stale:      result.StaleSummary,
-		})
-		fmt.Fprint(stdout, summary)
+		formatter.FormatTable(result, stdout)
 	}
 
 	return nil

@@ -40,6 +40,9 @@ func Analyze(files []internal.FileInfo, opts AnalyzeOpts) Result {
 
 	return Result{
 		TotalSize:     totalSize,
+		FileCount:     len(files),
+		ScannedAt:     opts.Now,
+		OlderThanDays: opts.OlderThanDays,
 		DirSizes:      AggregateByDir(files),
 		ExtStats:      AggregateByExt(files),
 		CategoryStats: AggregateByCategory(files),

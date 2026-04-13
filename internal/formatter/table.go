@@ -169,6 +169,35 @@ func PrintCategoryTable(w io.Writer, catStats map[analyzer.Category]analyzer.Cat
 	fmt.Fprint(w, tbl.Render())
 }
 
+func FormatTable(result analyzer.Result, w io.Writer) {
+	fmt.Fprintf(w, "Total: %s (%d files)\n\n", internal.FormatSize(result.TotalSize), result.FileCount)
+
+	fmt.Fprintln(w, "=== ディレクトリ別 Top 10 ===")
+	PrintDirTable(w, result.DirSizes, 10)
+
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "=== 拡張子別 Top 10 ===")
+	PrintExtTable(w, result.ExtStats, 10)
+
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "=== カテゴリ別内訳 ===")
+	PrintCategoryTable(w, result.CategoryStats)
+
+	fmt.Fprintln(w)
+	fmt.Fprintf(w, "=== 巨大ファイル Top %d ===\n", len(result.TopFiles))
+	PrintTopFiles(w, result.TopFiles)
+
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "=== サマリ ===")
+	summary := RenderSummary(SummaryInput{
+		TotalSize:  result.TotalSize,
+		Categories: result.CategoryStats,
+		WasteDirs:  result.WasteDirs,
+		Stale:      result.StaleSummary,
+	})
+	fmt.Fprint(w, summary)
+}
+
 func PrintTopFiles(w io.Writer, files []internal.FileInfo) {
 	if len(files) == 0 {
 		return
