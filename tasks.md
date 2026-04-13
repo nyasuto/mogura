@@ -123,7 +123,7 @@
 ### 7-A: 差分計算
  
 - [x] internal/analyzer/diff.go — DirDiff 型の定義。Path, PrevSize, CurrSize, Delta int64 のフィールド
-- [ ] internal/analyzer/diff.go — LoadPrevResult(path string) (Result, error) 関数。JSON ファイルを読み込んで Result にデコード + テスト
+- [x] internal/analyzer/diff.go — LoadPrevResult(path string) (Result, error) 関数。JSON ファイルを読み込んで Result にデコード + テスト
 - [ ] internal/analyzer/diff.go — ComputeDiff(prev, curr Result) []DirDiff 関数。ディレクトリ別のサイズ差分を計算。新規ディレクトリと削除ディレクトリも検出。Delta 降順でソート + テスト
  
 ### 7-B: 差分出力
