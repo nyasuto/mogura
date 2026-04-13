@@ -242,7 +242,7 @@
 
 ### 11-A: CI ワークフロー（test + quality）
 
-- [ ] `.github/workflows/ci.yml` 作成。trigger は `push`（main）と `pull_request`。Go 版数は go.mod の `go` ディレクティブから自動取得（`actions/setup-go` の `go-version-file: go.mod`）
+- [x] `.github/workflows/ci.yml` 作成。trigger は `push`（main）と `pull_request`。Go 版数は go.mod の `go` ディレクティブから自動取得（`actions/setup-go` の `go-version-file: go.mod`）
 - [ ] ジョブ内容: `go vet ./...` → `gofmt -l ./...`（差分あれば fail）→ `go test -race ./...` → `go build ./...`。これは `make quality` とほぼ同じだが `-race` を追加して競合検出も同時に回す
 - [ ] matrix で `ubuntu-latest` と `macos-latest` の両方で回す（Phase 10-B の darwin build tag 検証のため macOS 必須）
 - [ ] キャッシュ設定: `actions/setup-go` の組み込みキャッシュ（`cache: true`）で go modules と build cache を保持。CI 時間短縮
