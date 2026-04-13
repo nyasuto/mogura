@@ -82,6 +82,19 @@ func (ps *parallelScanner) start() {
 	}()
 }
 
+func (ps *parallelScanner) collect() []internal.FileInfo {
+	var files []internal.FileInfo
+	scanned := 0
+	for fi := range ps.resultCh {
+		files = append(files, fi)
+		scanned++
+		if ps.opts.OnProgress != nil {
+			ps.opts.OnProgress(scanned, fi.Dir)
+		}
+	}
+	return files
+}
+
 func (ps *parallelScanner) enqueue(path string) {
 	ps.wg.Add(1)
 	ps.taskCh <- dirTask{path: path}
