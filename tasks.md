@@ -116,7 +116,7 @@
  
 - [x] internal/app/app.go — OutputFormat が html のとき FormatHTML を呼び出す分岐を追加
 - [x] main.go / flags — `-html` フラグの追加。stdout に HTML を出力（`mogura --html ~ > report.html`）
-- [ ] README.md に HTML レポートの使い方とスクリーンショット説明を追記
+- [x] README.md に HTML レポートの使い方とスクリーンショット説明を追記
  
 ## Phase 7: 差分モード
  

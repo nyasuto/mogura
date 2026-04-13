@@ -49,6 +49,10 @@ mogura --older-than 180 ~/Documents
 
 # 特定のディレクトリやファイルを除外
 mogura --exclude 'node_modules,.git,*.tmp' ~/Projects
+
+# HTML レポートを生成
+mogura --html ~ > report.html
+open report.html
 ```
 
 ### `-exclude` の使い方
@@ -66,6 +70,25 @@ mogura --exclude 'node_modules,.git,*.tmp' ~/Projects
 mogura --exclude 'node_modules,.git,.cache,*.log' ~/Projects
 ```
 
+### HTML レポート
+
+`--html` フラグで、D3.js ツリーマップを使ったインタラクティブな HTML レポートを生成できる。
+
+```bash
+mogura --html ~ > report.html
+open report.html
+```
+
+レポートには以下が含まれる:
+
+- **ツリーマップ**: ディレクトリ構造をサイズ比例の矩形で可視化。カテゴリ別に色分けされる
+- **ドリルダウン**: 矩形をクリックでサブディレクトリに移動。パンくずリストで階層を辿れる
+- **ツールチップ**: ホバーでディレクトリ名・サイズ・ファイル数・全体割合を表示
+- **サマリパネル**: 総容量・カテゴリ内訳の棒グラフ・キャッシュ合計・推定節約可能量
+- **巨大ファイル Top10**: サイズの大きいファイルをテーブルで一覧表示
+
+HTML ファイルは単体で動作する（D3.js は CDN から読み込み）。
+
 ## 機能
 
 - ディレクトリ再帰走査（シンボリックリンクはスキップ）
@@ -75,7 +98,8 @@ mogura --exclude 'node_modules,.git,.cache,*.log' ~/Projects
 - キャッシュ・ビルド成果物などのゴミディレクトリ検出
 - 古いファイル（未更新 N 日以上）の検出と節約可能量の推定
 - human-readable サイズ表示（B / KB / MB / GB / TB）
-- JSON / ツリー / テーブル出力形式の切り替え
+- JSON / ツリー / テーブル / HTML 出力形式の切り替え
+- HTML レポートによるインタラクティブなツリーマップ可視化
 - 除外パターンによるスキャン対象の絞り込み
 - パーミッションエラーは警告して続行
 
