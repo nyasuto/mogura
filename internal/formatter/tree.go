@@ -10,19 +10,27 @@ import (
 )
 
 func FormatTree(result analyzer.Result, w io.Writer) {
-	fmt.Fprint(w, RenderTree(result.DirTree))
+	usePhysical := result.SizeMode == "physical"
+	fmt.Fprint(w, RenderTree(result.DirTree, usePhysical))
 }
 
-func RenderTree(node analyzer.DirNode) string {
+func nodeSize(node analyzer.DirNode, usePhysical bool) int64 {
+	if usePhysical {
+		return node.PhysicalSize
+	}
+	return node.Size
+}
+
+func RenderTree(node analyzer.DirNode, usePhysical bool) string {
 	var b strings.Builder
-	rootSize := node.Size
-	b.WriteString(fmt.Sprintf("%s %s (100.0%%)\n", node.Name, internal.FormatSize(node.Size)))
-	renderChildren(&b, node.Children, "", rootSize)
+	rootSize := nodeSize(node, usePhysical)
+	b.WriteString(fmt.Sprintf("%s %s (100.0%%)\n", node.Name, internal.FormatSize(rootSize)))
+	renderChildren(&b, node.Children, "", rootSize, usePhysical)
 	return b.String()
 }
 
-func renderChildren(b *strings.Builder, children []analyzer.DirNode, prefix string, rootSize int64) {
-	visible := filterVisible(children, rootSize)
+func renderChildren(b *strings.Builder, children []analyzer.DirNode, prefix string, rootSize int64, usePhysical bool) {
+	visible := filterVisible(children, rootSize, usePhysical)
 	for i, child := range visible {
 		isLast := i == len(visible)-1
 
@@ -31,30 +39,32 @@ func renderChildren(b *strings.Builder, children []analyzer.DirNode, prefix stri
 			connector = "└── "
 		}
 
+		childSize := nodeSize(child, usePhysical)
 		percent := 0.0
 		if rootSize > 0 {
-			percent = float64(child.Size) / float64(rootSize) * 100
+			percent = float64(childSize) / float64(rootSize) * 100
 		}
 
-		b.WriteString(fmt.Sprintf("%s%s%s %s (%.1f%%)\n", prefix, connector, child.Name, internal.FormatSize(child.Size), percent))
+		b.WriteString(fmt.Sprintf("%s%s%s %s (%.1f%%)\n", prefix, connector, child.Name, internal.FormatSize(childSize), percent))
 
 		if len(child.Children) > 0 {
 			childPrefix := prefix + "│   "
 			if isLast {
 				childPrefix = prefix + "    "
 			}
-			renderChildren(b, child.Children, childPrefix, rootSize)
+			renderChildren(b, child.Children, childPrefix, rootSize, usePhysical)
 		}
 	}
 }
 
-func filterVisible(children []analyzer.DirNode, rootSize int64) []analyzer.DirNode {
+func filterVisible(children []analyzer.DirNode, rootSize int64, usePhysical bool) []analyzer.DirNode {
 	if rootSize <= 0 {
 		return children
 	}
 	var result []analyzer.DirNode
 	for _, child := range children {
-		percent := float64(child.Size) / float64(rootSize) * 100
+		childSize := nodeSize(child, usePhysical)
+		percent := float64(childSize) / float64(rootSize) * 100
 		if percent >= 1.0 {
 			result = append(result, child)
 		}

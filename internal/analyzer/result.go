@@ -20,4 +20,5 @@ type Result struct {
 	StaleSummary      StaleResult                `json:"stale_summary"`
 	DiffSummary       []DirDiff                  `json:"diff_summary,omitempty"`
 	SavingsEstimate   int64                      `json:"savings_estimate"`
+	SizeMode          string                     `json:"size_mode,omitempty"`
 }

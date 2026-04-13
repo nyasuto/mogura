@@ -139,7 +139,7 @@ func TestPrintDirTableHasBar(t *testing.T) {
 		"/small": {Size: 1000, PhysicalSize: 1000},
 	}
 	var buf bytes.Buffer
-	PrintDirTable(&buf, dirSizes, 10)
+	PrintDirTable(&buf, dirSizes, 10, false)
 	output := buf.String()
 	if !strings.Contains(output, "█") {
 		t.Error("expected bar characters in dir table output")
@@ -155,7 +155,7 @@ func TestPrintDirTableSparseFile(t *testing.T) {
 		"/normal": {Size: 50000, PhysicalSize: 50000},
 	}
 	var buf bytes.Buffer
-	PrintDirTable(&buf, dirSizes, 10)
+	PrintDirTable(&buf, dirSizes, 10, false)
 	output := buf.String()
 	if !strings.Contains(output, "(実") {
 		t.Error("expected physical size annotation for sparse dir")
@@ -168,7 +168,7 @@ func TestPrintTopFilesSparseFile(t *testing.T) {
 		{Path: "/normal.txt", Size: 500, PhysicalSize: 500},
 	}
 	var buf bytes.Buffer
-	PrintTopFiles(&buf, files)
+	PrintTopFiles(&buf, files, false)
 	output := buf.String()
 	if !strings.Contains(output, "(実") {
 		t.Error("expected physical size annotation for sparse file")
@@ -181,7 +181,7 @@ func TestPrintExtTableHasBar(t *testing.T) {
 		".txt": {Size: 1000, Count: 5},
 	}
 	var buf bytes.Buffer
-	PrintExtTable(&buf, extStats, 10)
+	PrintExtTable(&buf, extStats, 10, false)
 	output := buf.String()
 	if !strings.Contains(output, "█") {
 		t.Error("expected bar characters in ext table output")
@@ -194,7 +194,7 @@ func TestPrintCategoryTableHasBar(t *testing.T) {
 		"Other": {Size: 1000, Count: 5, Percent: 20.0},
 	}
 	var buf bytes.Buffer
-	PrintCategoryTable(&buf, catStats)
+	PrintCategoryTable(&buf, catStats, false)
 	output := buf.String()
 	if !strings.Contains(output, "█") {
 		t.Error("expected bar characters in category table output")

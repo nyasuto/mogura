@@ -107,14 +107,29 @@ type DirEntry struct {
 	PhysicalSize int64
 }
 
-func PrintDirTable(w io.Writer, dirSizes map[string]analyzer.DirSizeInfo, limit int) {
+func effectiveSize(size, physical int64, usePhysical bool) int64 {
+	if usePhysical {
+		return physical
+	}
+	return size
+}
+
+func formatSizeForMode(size, physical int64, usePhysical bool) string {
+	if usePhysical {
+		return FormatSizeWithPhysical(physical, size)
+	}
+	return FormatSizeWithPhysical(size, physical)
+}
+
+func PrintDirTable(w io.Writer, dirSizes map[string]analyzer.DirSizeInfo, limit int, usePhysical bool) {
 	entries := make([]DirEntry, 0, len(dirSizes))
 	for path, info := range dirSizes {
 		entries = append(entries, DirEntry{Path: path, Size: info.Size, PhysicalSize: info.PhysicalSize})
 	}
 
 	sort.Slice(entries, func(i, j int) bool {
-		return entries[i].Size > entries[j].Size
+		return effectiveSize(entries[i].Size, entries[i].PhysicalSize, usePhysical) >
+			effectiveSize(entries[j].Size, entries[j].PhysicalSize, usePhysical)
 	})
 
 	if limit > 0 && len(entries) > limit {
@@ -123,7 +138,7 @@ func PrintDirTable(w io.Writer, dirSizes map[string]analyzer.DirSizeInfo, limit 
 
 	var maxSize int64
 	if len(entries) > 0 {
-		maxSize = entries[0].Size
+		maxSize = effectiveSize(entries[0].Size, entries[0].PhysicalSize, usePhysical)
 	}
 
 	tbl := Table{
@@ -131,8 +146,9 @@ func PrintDirTable(w io.Writer, dirSizes map[string]analyzer.DirSizeInfo, limit 
 		RightAlign: []bool{false, true, false},
 	}
 	for _, e := range entries {
-		bar := RenderBar(int(e.Size), int(maxSize), barWidth)
-		tbl.Rows = append(tbl.Rows, Row{e.Path, FormatSizeWithPhysical(e.Size, e.PhysicalSize), bar})
+		s := effectiveSize(e.Size, e.PhysicalSize, usePhysical)
+		bar := RenderBar(int(s), int(maxSize), barWidth)
+		tbl.Rows = append(tbl.Rows, Row{e.Path, formatSizeForMode(e.Size, e.PhysicalSize, usePhysical), bar})
 	}
 	fmt.Fprint(w, tbl.Render())
 }
@@ -144,14 +160,15 @@ type ExtEntry struct {
 	Count        int
 }
 
-func PrintExtTable(w io.Writer, extStats map[string]analyzer.ExtStats, limit int) {
+func PrintExtTable(w io.Writer, extStats map[string]analyzer.ExtStats, limit int, usePhysical bool) {
 	entries := make([]ExtEntry, 0, len(extStats))
 	for ext, s := range extStats {
 		entries = append(entries, ExtEntry{Ext: ext, Size: s.Size, PhysicalSize: s.PhysicalSize, Count: s.Count})
 	}
 
 	sort.Slice(entries, func(i, j int) bool {
-		return entries[i].Size > entries[j].Size
+		return effectiveSize(entries[i].Size, entries[i].PhysicalSize, usePhysical) >
+			effectiveSize(entries[j].Size, entries[j].PhysicalSize, usePhysical)
 	})
 
 	if limit > 0 && len(entries) > limit {
@@ -160,7 +177,7 @@ func PrintExtTable(w io.Writer, extStats map[string]analyzer.ExtStats, limit int
 
 	var maxSize int64
 	if len(entries) > 0 {
-		maxSize = entries[0].Size
+		maxSize = effectiveSize(entries[0].Size, entries[0].PhysicalSize, usePhysical)
 	}
 
 	tbl := Table{
@@ -168,8 +185,9 @@ func PrintExtTable(w io.Writer, extStats map[string]analyzer.ExtStats, limit int
 		RightAlign: []bool{false, true, true, false},
 	}
 	for _, e := range entries {
-		bar := RenderBar(int(e.Size), int(maxSize), barWidth)
-		tbl.Rows = append(tbl.Rows, Row{e.Ext, FormatSizeWithPhysical(e.Size, e.PhysicalSize), fmt.Sprintf("%d", e.Count), bar})
+		s := effectiveSize(e.Size, e.PhysicalSize, usePhysical)
+		bar := RenderBar(int(s), int(maxSize), barWidth)
+		tbl.Rows = append(tbl.Rows, Row{e.Ext, formatSizeForMode(e.Size, e.PhysicalSize, usePhysical), fmt.Sprintf("%d", e.Count), bar})
 	}
 	fmt.Fprint(w, tbl.Render())
 }
@@ -182,19 +200,20 @@ type CatEntry struct {
 	Percent      float64
 }
 
-func PrintCategoryTable(w io.Writer, catStats map[analyzer.Category]analyzer.CategoryStats) {
+func PrintCategoryTable(w io.Writer, catStats map[analyzer.Category]analyzer.CategoryStats, usePhysical bool) {
 	entries := make([]CatEntry, 0, len(catStats))
 	for cat, s := range catStats {
 		entries = append(entries, CatEntry{Category: cat, Size: s.Size, PhysicalSize: s.PhysicalSize, Count: s.Count, Percent: s.Percent})
 	}
 
 	sort.Slice(entries, func(i, j int) bool {
-		return entries[i].Size > entries[j].Size
+		return effectiveSize(entries[i].Size, entries[i].PhysicalSize, usePhysical) >
+			effectiveSize(entries[j].Size, entries[j].PhysicalSize, usePhysical)
 	})
 
 	var maxSize int64
 	if len(entries) > 0 {
-		maxSize = entries[0].Size
+		maxSize = effectiveSize(entries[0].Size, entries[0].PhysicalSize, usePhysical)
 	}
 
 	tbl := Table{
@@ -202,10 +221,11 @@ func PrintCategoryTable(w io.Writer, catStats map[analyzer.Category]analyzer.Cat
 		RightAlign: []bool{false, true, true, true, false},
 	}
 	for _, e := range entries {
-		bar := RenderBar(int(e.Size), int(maxSize), barWidth)
+		s := effectiveSize(e.Size, e.PhysicalSize, usePhysical)
+		bar := RenderBar(int(s), int(maxSize), barWidth)
 		tbl.Rows = append(tbl.Rows, Row{
 			string(e.Category),
-			FormatSizeWithPhysical(e.Size, e.PhysicalSize),
+			formatSizeForMode(e.Size, e.PhysicalSize, usePhysical),
 			fmt.Sprintf("%d", e.Count),
 			fmt.Sprintf("%.1f%%", e.Percent),
 			bar,
@@ -215,22 +235,28 @@ func PrintCategoryTable(w io.Writer, catStats map[analyzer.Category]analyzer.Cat
 }
 
 func FormatTable(result analyzer.Result, w io.Writer) {
-	fmt.Fprintf(w, "Total: %s (%d files)\n\n", internal.FormatSize(result.TotalSize), result.FileCount)
+	usePhysical := result.SizeMode == "physical"
+	totalDisplay := result.TotalSize
+	if usePhysical {
+		totalDisplay = result.TotalPhysicalSize
+	}
+
+	fmt.Fprintf(w, "Total: %s (%d files)\n\n", internal.FormatSize(totalDisplay), result.FileCount)
 
 	fmt.Fprintln(w, "=== ディレクトリ別 Top 10 ===")
-	PrintDirTable(w, result.DirSizes, 10)
+	PrintDirTable(w, result.DirSizes, 10, usePhysical)
 
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "=== 拡張子別 Top 10 ===")
-	PrintExtTable(w, result.ExtStats, 10)
+	PrintExtTable(w, result.ExtStats, 10, usePhysical)
 
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "=== カテゴリ別内訳 ===")
-	PrintCategoryTable(w, result.CategoryStats)
+	PrintCategoryTable(w, result.CategoryStats, usePhysical)
 
 	fmt.Fprintln(w)
 	fmt.Fprintf(w, "=== 巨大ファイル Top %d ===\n", len(result.TopFiles))
-	PrintTopFiles(w, result.TopFiles)
+	PrintTopFiles(w, result.TopFiles, usePhysical)
 
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "=== サマリ ===")
@@ -281,7 +307,7 @@ func FormatDiffTable(diffs []analyzer.DirDiff, w io.Writer, limit int) {
 	fmt.Fprint(w, tbl.Render())
 }
 
-func PrintTopFiles(w io.Writer, files []internal.FileInfo) {
+func PrintTopFiles(w io.Writer, files []internal.FileInfo, usePhysical bool) {
 	if len(files) == 0 {
 		return
 	}
@@ -291,7 +317,7 @@ func PrintTopFiles(w io.Writer, files []internal.FileInfo) {
 		RightAlign: []bool{false, true},
 	}
 	for _, f := range files {
-		tbl.Rows = append(tbl.Rows, Row{f.Path, FormatSizeWithPhysical(f.Size, f.PhysicalSize)})
+		tbl.Rows = append(tbl.Rows, Row{f.Path, formatSizeForMode(f.Size, f.PhysicalSize, usePhysical)})
 	}
 	fmt.Fprint(w, tbl.Render())
 }

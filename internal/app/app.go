@@ -24,6 +24,13 @@ const (
 	FormatHTML OutputFormat = "html"
 )
 
+type SizeMode string
+
+const (
+	SizeModeLogical  SizeMode = "logical"
+	SizeModePhysical SizeMode = "physical"
+)
+
 type Config struct {
 	TargetPath    string
 	TopN          int
@@ -36,6 +43,7 @@ type Config struct {
 	FilterExt     []string
 	Quiet         bool
 	OneFileSystem bool
+	SizeMode      SizeMode
 }
 
 func ParseFlags(args []string) (Config, error) {
@@ -53,6 +61,7 @@ func ParseFlags(args []string) (Config, error) {
 	filterExt := fs.String("ext", "", "対象拡張子（カンマ区切り: mp4,mkv,avi）")
 	quiet := fs.Bool("quiet", false, "進捗表示を抑制")
 	oneFS := fs.Bool("x", false, "ファイルシステム境界を越えない")
+	sizeMode := fs.String("size-mode", "logical", "サイズ表示モード（logical / physical）")
 
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "usage: mogura [flags] <path>\n")
@@ -105,6 +114,11 @@ func ParseFlags(args []string) (Config, error) {
 		}
 	}
 
+	sm := SizeModeLogical
+	if *sizeMode == "physical" {
+		sm = SizeModePhysical
+	}
+
 	return Config{
 		TargetPath:    fs.Arg(0),
 		TopN:          *top,
@@ -117,6 +131,7 @@ func ParseFlags(args []string) (Config, error) {
 		FilterExt:     filterExts,
 		Quiet:         *quiet,
 		OneFileSystem: *oneFS,
+		SizeMode:      sm,
 	}, nil
 }
 
@@ -237,6 +252,7 @@ func Run(cfg Config, stdout io.Writer, stderr io.Writer) error {
 		OlderThanDays: cfg.OlderThanDays,
 		Now:           now,
 	})
+	result.SizeMode = string(cfg.SizeMode)
 
 	if cfg.DiffPath != "" {
 		prev, err := analyzer.LoadPrevResult(cfg.DiffPath)

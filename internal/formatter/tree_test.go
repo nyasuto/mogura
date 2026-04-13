@@ -74,7 +74,7 @@ func TestRenderTree(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := RenderTree(tt.node)
+			got := RenderTree(tt.node, false)
 			for _, want := range tt.contains {
 				if !strings.Contains(got, want) {
 					t.Errorf("RenderTree() missing expected line %q\ngot:\n%s", want, got)
@@ -170,7 +170,7 @@ func TestRenderTreeOmitsSmallNodes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := RenderTree(tt.node)
+			got := RenderTree(tt.node, false)
 			for _, want := range tt.contains {
 				if !strings.Contains(got, want) {
 					t.Errorf("RenderTree() missing expected %q\ngot:\n%s", want, got)
@@ -202,7 +202,7 @@ func TestRenderTreeStructure(t *testing.T) {
 		},
 	}
 
-	got := RenderTree(node)
+	got := RenderTree(node, false)
 	lines := strings.Split(strings.TrimRight(got, "\n"), "\n")
 
 	if len(lines) != 5 {
