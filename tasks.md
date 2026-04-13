@@ -158,7 +158,7 @@
 ### 8-D: マウント境界（F12）
  
 - [x] internal/scanner/scanner.go — ScanOpts に OneFileSystem bool を追加。Walk 時にデバイス ID が変わったらスキップ（syscall.Stat_t.Dev を比較） + テスト
-- [ ] flags — `-x` フラグの追加
+- [x] flags — `-x` フラグの追加
  
  
 ---

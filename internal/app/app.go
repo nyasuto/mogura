@@ -35,6 +35,7 @@ type Config struct {
 	MinSize       int64
 	FilterExt     []string
 	Quiet         bool
+	OneFileSystem bool
 }
 
 func ParseFlags(args []string) (Config, error) {
@@ -51,6 +52,7 @@ func ParseFlags(args []string) (Config, error) {
 	minSizeStr := fs.String("min-size", "", "最小ファイルサイズ（例: 10M, 1G, 500K）")
 	filterExt := fs.String("ext", "", "対象拡張子（カンマ区切り: mp4,mkv,avi）")
 	quiet := fs.Bool("quiet", false, "進捗表示を抑制")
+	oneFS := fs.Bool("x", false, "ファイルシステム境界を越えない")
 
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "usage: mogura [flags] <path>\n")
@@ -114,6 +116,7 @@ func ParseFlags(args []string) (Config, error) {
 		MinSize:       minSize,
 		FilterExt:     filterExts,
 		Quiet:         *quiet,
+		OneFileSystem: *oneFS,
 	}, nil
 }
 
@@ -199,7 +202,8 @@ func FilterFiles(files []internal.FileInfo, minSize int64, filterExt []string) [
 
 func Run(cfg Config, stdout io.Writer, stderr io.Writer) error {
 	scanOpts := scanner.ScanOpts{
-		Exclude: cfg.Exclude,
+		Exclude:       cfg.Exclude,
+		OneFileSystem: cfg.OneFileSystem,
 	}
 
 	if !cfg.Quiet {
