@@ -102,6 +102,8 @@ func Run(cfg Config, stdout io.Writer, stderr io.Writer) error {
 		return formatter.FormatJSON(result, stdout)
 	case FormatTree:
 		formatter.FormatTree(result, stdout)
+	case FormatHTML:
+		return formatter.FormatHTML(result, stdout)
 	default:
 		formatter.FormatTable(result, stdout)
 	}
