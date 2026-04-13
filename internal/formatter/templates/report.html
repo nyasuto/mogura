@@ -54,6 +54,12 @@
         .largest-files .col-path { word-break: break-all; color: #e0e0e0; }
         .largest-files .col-ext { width: 80px; color: #aaa; }
         .largest-files .col-size { width: 100px; text-align: right; font-weight: 500; color: #fff; }
+        .largest-files .col-physical { width: 100px; text-align: right; font-weight: 500; color: #aaa; font-size: 12px; }
+        .size-toggle { display: flex; align-items: center; gap: 0; border: 1px solid #0f3460; border-radius: 6px; overflow: hidden; }
+        .size-toggle button { padding: 6px 14px; font-size: 12px; border: none; cursor: pointer; background: #16213e; color: #888; transition: background 0.15s, color 0.15s; }
+        .size-toggle button.active { background: #0f3460; color: #fff; }
+        .size-toggle button:hover:not(.active) { background: #1a2a4e; }
+        .controls-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
     </style>
 </head>
 <body>
@@ -63,7 +69,13 @@
     </div>
     <div class="container">
         <div class="summary-panel" id="summary"></div>
-        <div class="legend" id="legend"></div>
+        <div class="controls-row">
+            <div class="legend" id="legend"></div>
+            <div class="size-toggle" id="size-toggle">
+                <button class="active" data-mode="logical">論理サイズ</button>
+                <button data-mode="physical">物理サイズ</button>
+            </div>
+        </div>
         <div class="breadcrumb" id="breadcrumb"></div>
         <div id="treemap"></div>
         <div class="largest-files" id="largest-files"></div>
@@ -93,6 +105,10 @@
             "アーカイブ": "#e67e22",
             "その他": "#7f8c8d"
         };
+
+        var sizeMode = "logical";
+        function getSize(d) { return sizeMode === "physical" ? (d.physical_size || d.size) : d.size; }
+        function getTotalSize() { return sizeMode === "physical" ? (data.dir_tree.physical_size || data.total_size) : data.total_size; }
 
         var isDiffMode = !!(data.diff_summary && data.diff_summary.length > 0);
         var diffMap = {};
@@ -303,7 +319,7 @@
             }
 
             var root = d3.hierarchy(node)
-                .sum(function(d) { return d.children && d.children.length > 0 ? 0 : d.size; })
+                .sum(function(d) { return d.children && d.children.length > 0 ? 0 : getSize(d); })
                 .sort(function(a, b) { return b.value - a.value; });
 
             d3.treemap()
@@ -356,7 +372,7 @@
                     if (nodeH > 35) {
                         var sizeSpan = document.createElement("span");
                         sizeSpan.className = "node-size";
-                        sizeSpan.textContent = formatSize(leaf.data.size);
+                        sizeSpan.textContent = formatSize(getSize(leaf.data));
                         label.appendChild(sizeSpan);
                     }
                     div.appendChild(label);
@@ -374,11 +390,20 @@
         document.body.appendChild(tooltip);
 
         function showTooltip(e, d, diffDelta) {
-            var pct = data.total_size > 0 ? (d.size / data.total_size * 100) : 0;
+            var currentSize = getSize(d);
+            var total = getTotalSize();
+            var pct = total > 0 ? (currentSize / total * 100) : 0;
             var pctStr = pct < 0.1 ? "<0.1%" : pct.toFixed(1) + "%";
+            var sizeLabel = sizeMode === "physical" ? "物理サイズ" : "サイズ";
             var html =
                 '<div class="tt-name">' + d.name + '</div>' +
-                '<div class="tt-row"><span class="tt-label">サイズ</span><span class="tt-value">' + formatSize(d.size) + '</span></div>' +
+                '<div class="tt-row"><span class="tt-label">' + sizeLabel + '</span><span class="tt-value">' + formatSize(currentSize) + '</span></div>';
+            if (d.physical_size && d.physical_size !== d.size) {
+                var otherLabel = sizeMode === "physical" ? "論理サイズ" : "物理サイズ";
+                var otherSize = sizeMode === "physical" ? d.size : d.physical_size;
+                html += '<div class="tt-row"><span class="tt-label">' + otherLabel + '</span><span class="tt-value" style="color:#aaa">' + formatSize(otherSize) + '</span></div>';
+            }
+            html +=
                 '<div class="tt-row"><span class="tt-label">ファイル数</span><span class="tt-value">' + (d.file_count || 0).toLocaleString() + '</span></div>' +
                 '<div class="tt-row"><span class="tt-label">全体に対する割合</span><span class="tt-value">' + pctStr + '</span></div>';
             if (isDiffMode && diffDelta !== undefined) {
@@ -408,17 +433,23 @@
         var tree = data.dir_tree;
         renderTreemap(tree);
 
-        (function() {
+        function renderLargestFiles() {
+            var panel = document.getElementById("largest-files");
+            panel.innerHTML = "";
             var files = (data.largest_files || []).slice(0, 10);
             if (files.length === 0) return;
-            var panel = document.getElementById("largest-files");
+            if (sizeMode === "physical") {
+                files = files.slice().sort(function(a, b) { return (b.physical_size || b.size) - (a.physical_size || a.size); });
+            }
             var h2 = document.createElement("h2");
             h2.textContent = "巨大ファイル Top " + files.length;
             panel.appendChild(h2);
             var table = document.createElement("table");
             var thead = document.createElement("thead");
             var hr = document.createElement("tr");
-            ["#", "パス", "拡張子", "サイズ"].forEach(function(t, i) {
+            var headers = ["#", "パス", "拡張子", "サイズ"];
+            if (sizeMode === "physical") headers[3] = "物理サイズ";
+            headers.forEach(function(t, i) {
                 var th = document.createElement("th");
                 th.textContent = t;
                 if (i === 3) th.className = "col-size";
@@ -443,12 +474,39 @@
                 tr.appendChild(tdExt);
                 var tdSize = document.createElement("td");
                 tdSize.className = "col-size";
-                tdSize.textContent = formatSize(f.size);
+                tdSize.textContent = formatSize(getSize(f));
+                if (f.physical_size && f.physical_size !== f.size) {
+                    var otherSize = sizeMode === "physical" ? f.size : f.physical_size;
+                    var otherLabel = sizeMode === "physical" ? "論理" : "実";
+                    tdSize.title = otherLabel + ": " + formatSize(otherSize);
+                }
                 tr.appendChild(tdSize);
                 tbody.appendChild(tr);
             });
             table.appendChild(tbody);
             panel.appendChild(table);
+        }
+        renderLargestFiles();
+
+        // Size toggle handler
+        (function() {
+            var toggleEl = document.getElementById("size-toggle");
+            var buttons = toggleEl.querySelectorAll("button");
+            buttons.forEach(function(btn) {
+                btn.addEventListener("click", function() {
+                    var mode = btn.getAttribute("data-mode");
+                    if (mode === sizeMode) return;
+                    sizeMode = mode;
+                    buttons.forEach(function(b) { b.classList.remove("active"); });
+                    btn.classList.add("active");
+                    var target = data.dir_tree;
+                    for (var j = 0; j < navStack.length; j++) {
+                        target = navStack[j];
+                    }
+                    renderTreemap(target);
+                    renderLargestFiles();
+                });
+            });
         })();
     </script>
 </body>
