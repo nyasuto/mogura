@@ -130,6 +130,31 @@ func TestAnalyzeEmpty(t *testing.T) {
 	}
 }
 
+func TestSavingsEstimateAlwaysPhysical(t *testing.T) {
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	oldTime := now.AddDate(-2, 0, 0)
+
+	files := []internal.FileInfo{
+		{Path: "/app/node_modules/pkg/index.js", Dir: "/app/node_modules/pkg", Ext: ".js", Size: 10000, PhysicalSize: 2000, ModTime: now},
+		{Path: "/app/old.dat", Dir: "/app", Ext: ".dat", Size: 50000, PhysicalSize: 5000, ModTime: oldTime},
+	}
+
+	result := Analyze(files, AnalyzeOpts{Now: now, OlderThanDays: 365})
+
+	wastePhysical := result.WasteDirs[0].PhysicalSize
+	stalePhysical := result.StaleSummary.TotalPhysicalSize
+	wantSavings := wastePhysical + stalePhysical
+
+	if result.SavingsEstimate != wantSavings {
+		t.Errorf("SavingsEstimate = %d, want %d (physical-based); logical waste=%d, logical stale=%d",
+			result.SavingsEstimate, wantSavings,
+			result.WasteDirs[0].Size, result.StaleSummary.TotalSize)
+	}
+	if result.SavingsEstimate == result.WasteDirs[0].Size+result.StaleSummary.TotalSize {
+		t.Error("SavingsEstimate equals logical sizes; should use physical sizes")
+	}
+}
+
 func TestAnalyzeWasteDirs(t *testing.T) {
 	files := []internal.FileInfo{
 		{Path: "/app/node_modules/pkg/index.js", Dir: "/app/node_modules/pkg", Ext: ".js", Size: 2000, PhysicalSize: 1500, ModTime: time.Now()},

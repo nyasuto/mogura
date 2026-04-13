@@ -263,6 +263,19 @@ func TestParseFlags(t *testing.T) {
 				Depth:         3,
 				OutputFormat:  FormatText,
 				OlderThanDays: 365,
+				SizeMode:      SizeModeLogical,
+			},
+		},
+		{
+			name: "size-mode physical",
+			args: []string{"--size-mode", "physical", "/tmp"},
+			want: Config{
+				TargetPath:    "/tmp",
+				TopN:          20,
+				Depth:         3,
+				OutputFormat:  FormatText,
+				OlderThanDays: 365,
+				SizeMode:      SizeModePhysical,
 			},
 		},
 		{
@@ -274,6 +287,7 @@ func TestParseFlags(t *testing.T) {
 				Depth:         3,
 				OutputFormat:  FormatJSON,
 				OlderThanDays: 365,
+				SizeMode:      SizeModeLogical,
 			},
 		},
 		{
@@ -285,6 +299,7 @@ func TestParseFlags(t *testing.T) {
 				Depth:         5,
 				OutputFormat:  FormatTree,
 				OlderThanDays: 365,
+				SizeMode:      SizeModeLogical,
 			},
 		},
 		{
@@ -297,6 +312,7 @@ func TestParseFlags(t *testing.T) {
 				OutputFormat:  FormatText,
 				Exclude:       []string{"node_modules", ".git", "*.tmp"},
 				OlderThanDays: 365,
+				SizeMode:      SizeModeLogical,
 			},
 		},
 		{
@@ -310,6 +326,7 @@ func TestParseFlags(t *testing.T) {
 				OlderThanDays: 365,
 				MinSize:       10 * 1024 * 1024,
 				FilterExt:     []string{"mp4", "mkv"},
+				SizeMode:      SizeModeLogical,
 			},
 		},
 		{
@@ -362,6 +379,9 @@ func TestParseFlags(t *testing.T) {
 						t.Errorf("FilterExt[%d] = %q, want %q", i, got.FilterExt[i], tt.want.FilterExt[i])
 					}
 				}
+			}
+			if got.SizeMode != tt.want.SizeMode {
+				t.Errorf("SizeMode = %q, want %q", got.SizeMode, tt.want.SizeMode)
 			}
 			if len(got.Exclude) != len(tt.want.Exclude) {
 				t.Errorf("Exclude len = %d, want %d", len(got.Exclude), len(tt.want.Exclude))
