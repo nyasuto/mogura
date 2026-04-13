@@ -247,6 +247,75 @@ func TestParseHumanSize(t *testing.T) {
 	}
 }
 
+func TestParseFlags_BulkstatFlag(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want *bool
+	}{
+		{
+			name: "default (bulkstat=true)",
+			args: []string{"/tmp"},
+			want: boolPtr(true),
+		},
+		{
+			name: "bulkstat=false",
+			args: []string{"--bulkstat=false", "/tmp"},
+			want: boolPtr(false),
+		},
+		{
+			name: "bulkstat=true explicit",
+			args: []string{"--bulkstat=true", "/tmp"},
+			want: boolPtr(true),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseFlags(tt.args)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got.UseBulkStat == nil {
+				t.Fatal("UseBulkStat is nil")
+			}
+			if *got.UseBulkStat != *tt.want {
+				t.Errorf("UseBulkStat = %v, want %v", *got.UseBulkStat, *tt.want)
+			}
+		})
+	}
+}
+
+func TestRun_BulkstatFalse(t *testing.T) {
+	dir := setupTmpDir(t)
+	b := false
+	cfg := Config{
+		TargetPath:    dir,
+		TopN:          5,
+		Depth:         3,
+		OutputFormat:  FormatText,
+		OlderThanDays: 365,
+		UseBulkStat:   &b,
+		Quiet:         true,
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := Run(cfg, &stdout, &stderr); err != nil {
+		t.Fatalf("Run with bulkstat=false returned error: %v", err)
+	}
+
+	if stdout.Len() == 0 {
+		t.Error("expected non-empty stdout output")
+	}
+
+	output := stdout.String()
+	if !strings.Contains(output, "hello.txt") && !strings.Contains(output, "data.csv") {
+		t.Error("expected output to contain scanned file names")
+	}
+}
+
+func boolPtr(b bool) *bool { return &b }
+
 func TestParseFlags(t *testing.T) {
 	tests := []struct {
 		name    string

@@ -360,6 +360,136 @@ func TestParallelDeterministicResults(t *testing.T) {
 	}
 }
 
+func TestBulkStatFallback(t *testing.T) {
+	base := t.TempDir()
+	createTree(t, base, map[string]string{
+		"a.txt":          "hello",
+		"sub/b.go":       "package main",
+		"sub/deep/c.c":   "int main(){}",
+		"sub/deep/d.txt": "world",
+		"x/y/z/big.dat":  strings.Repeat("X", 4096),
+	})
+
+	if err := os.Symlink(filepath.Join(base, "a.txt"), filepath.Join(base, "link.txt")); err != nil {
+		t.Fatal(err)
+	}
+
+	bulkTrue := true
+	bulkFalse := false
+
+	filesDefault, err := Scan(base, ScanOpts{Workers: 4})
+	if err != nil {
+		t.Fatalf("default Scan: %v", err)
+	}
+	filesBulk, err := Scan(base, ScanOpts{Workers: 4, UseBulkStat: &bulkTrue})
+	if err != nil {
+		t.Fatalf("bulkstat=true Scan: %v", err)
+	}
+	filesFallback, err := Scan(base, ScanOpts{Workers: 4, UseBulkStat: &bulkFalse})
+	if err != nil {
+		t.Fatalf("bulkstat=false Scan: %v", err)
+	}
+
+	sortFilesByPath(filesDefault)
+	sortFilesByPath(filesBulk)
+	sortFilesByPath(filesFallback)
+
+	if len(filesDefault) != len(filesFallback) {
+		t.Fatalf("file count: default=%d, fallback=%d", len(filesDefault), len(filesFallback))
+	}
+	if len(filesBulk) != len(filesFallback) {
+		t.Fatalf("file count: bulk=%d, fallback=%d", len(filesBulk), len(filesFallback))
+	}
+
+	for i := range filesDefault {
+		fb := filesFallback[i]
+		df := filesDefault[i]
+		if df.Path != fb.Path {
+			t.Errorf("index %d: path mismatch default=%s fallback=%s", i, df.Path, fb.Path)
+		}
+		if df.Size != fb.Size {
+			t.Errorf("index %d (%s): size mismatch default=%d fallback=%d", i, df.Path, df.Size, fb.Size)
+		}
+		if df.PhysicalSize != fb.PhysicalSize {
+			t.Errorf("index %d (%s): physical size mismatch default=%d fallback=%d", i, df.Path, df.PhysicalSize, fb.PhysicalSize)
+		}
+		if df.Ext != fb.Ext {
+			t.Errorf("index %d (%s): ext mismatch default=%s fallback=%s", i, df.Path, df.Ext, fb.Ext)
+		}
+		if !df.ModTime.Equal(fb.ModTime) {
+			t.Errorf("index %d (%s): modtime mismatch default=%v fallback=%v", i, df.Path, df.ModTime, fb.ModTime)
+		}
+	}
+
+	for _, f := range filesFallback {
+		if filepath.Base(f.Path) == "link.txt" {
+			t.Error("fallback should also skip symlinks")
+		}
+	}
+}
+
+func TestBulkStatFallbackWithExclude(t *testing.T) {
+	base := t.TempDir()
+	createTree(t, base, map[string]string{
+		"src/main.go":           "package main",
+		"node_modules/pkg/a.js": "module.exports={}",
+		".cache/data.bin":       "cached",
+		"readme.txt":            "hello",
+	})
+
+	bulkFalse := false
+	opts := ScanOpts{
+		Workers:     4,
+		UseBulkStat: &bulkFalse,
+		Exclude:     []string{"node_modules", ".cache"},
+	}
+
+	files, err := Scan(base, opts)
+	if err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
+
+	if len(files) != 2 {
+		names := make([]string, len(files))
+		for i, f := range files {
+			names[i] = filepath.Base(f.Path)
+		}
+		t.Errorf("expected 2 files, got %d: %v", len(files), names)
+	}
+}
+
+func TestBulkStatFallbackSparse(t *testing.T) {
+	base := t.TempDir()
+	sparse := filepath.Join(base, "sparse.raw")
+	f, err := os.Create(sparse)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const logicalSize = 1 << 30
+	if err := f.Truncate(logicalSize); err != nil {
+		f.Close()
+		t.Fatal(err)
+	}
+	f.Close()
+
+	bulkFalse := false
+	files, err := Scan(base, ScanOpts{Workers: 4, UseBulkStat: &bulkFalse})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 1 {
+		t.Fatalf("expected 1 file, got %d", len(files))
+	}
+
+	fi := files[0]
+	if fi.Size != logicalSize {
+		t.Errorf("expected logical size %d, got %d", logicalSize, fi.Size)
+	}
+	if fi.PhysicalSize >= fi.Size {
+		t.Errorf("sparse file: expected PhysicalSize (%d) << Size (%d)", fi.PhysicalSize, fi.Size)
+	}
+}
+
 func TestParallelConsistencyLargeTree(t *testing.T) {
 	base := t.TempDir()
 
