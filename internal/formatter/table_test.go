@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"mogura/internal"
 	"mogura/internal/analyzer"
 )
 
@@ -78,6 +79,60 @@ func TestRender(t *testing.T) {
 	}
 }
 
+func TestFormatSizeWithPhysical(t *testing.T) {
+	tests := []struct {
+		name         string
+		size         int64
+		physicalSize int64
+		want         string
+	}{
+		{
+			name:         "no divergence",
+			size:         1024,
+			physicalSize: 1024,
+			want:         "1.0 KB",
+		},
+		{
+			name:         "small divergence under 10%",
+			size:         1000,
+			physicalSize: 950,
+			want:         "1000 B",
+		},
+		{
+			name:         "exactly 10% divergence shows bracket",
+			size:         1000,
+			physicalSize: 899,
+			want:         "1000 B (実 899 B)",
+		},
+		{
+			name:         "large divergence sparse file",
+			size:         100 * 1024 * 1024 * 1024,
+			physicalSize: 9200 * 1024 * 1024,
+			want:         "100.0 GB (実 9.0 GB)",
+		},
+		{
+			name:         "physical zero falls back to single value",
+			size:         1024,
+			physicalSize: 0,
+			want:         "1.0 KB",
+		},
+		{
+			name:         "size zero",
+			size:         0,
+			physicalSize: 0,
+			want:         "0 B",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := FormatSizeWithPhysical(tt.size, tt.physicalSize)
+			if got != tt.want {
+				t.Errorf("FormatSizeWithPhysical(%d, %d) = %q, want %q", tt.size, tt.physicalSize, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestPrintDirTableHasBar(t *testing.T) {
 	dirSizes := map[string]analyzer.DirSizeInfo{
 		"/big":   {Size: 2000, PhysicalSize: 2000},
@@ -91,6 +146,32 @@ func TestPrintDirTableHasBar(t *testing.T) {
 	}
 	if !strings.Contains(output, "░") {
 		t.Error("expected empty bar characters in dir table output")
+	}
+}
+
+func TestPrintDirTableSparseFile(t *testing.T) {
+	dirSizes := map[string]analyzer.DirSizeInfo{
+		"/sparse": {Size: 100000, PhysicalSize: 5000},
+		"/normal": {Size: 50000, PhysicalSize: 50000},
+	}
+	var buf bytes.Buffer
+	PrintDirTable(&buf, dirSizes, 10)
+	output := buf.String()
+	if !strings.Contains(output, "(実") {
+		t.Error("expected physical size annotation for sparse dir")
+	}
+}
+
+func TestPrintTopFilesSparseFile(t *testing.T) {
+	files := []internal.FileInfo{
+		{Path: "/sparse.raw", Size: 1000000, PhysicalSize: 50000},
+		{Path: "/normal.txt", Size: 500, PhysicalSize: 500},
+	}
+	var buf bytes.Buffer
+	PrintTopFiles(&buf, files)
+	output := buf.String()
+	if !strings.Contains(output, "(実") {
+		t.Error("expected physical size annotation for sparse file")
 	}
 }
 

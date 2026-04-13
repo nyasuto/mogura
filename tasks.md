@@ -183,7 +183,7 @@
 
 ### 9-C: 表示への反映
 
-- [ ] internal/formatter/table.go — 論理サイズと物理サイズの乖離が 10% 以上の場合のみ、サイズ列に `926.4 GB (実 43.2 GB)` 形式で括弧表示 + テスト。乖離が小さい行は従来どおり単一値
+- [x] internal/formatter/table.go — 論理サイズと物理サイズの乖離が 10% 以上の場合のみ、サイズ列に `926.4 GB (実 43.2 GB)` 形式で括弧表示 + テスト。乖離が小さい行は従来どおり単一値
 - [ ] internal/formatter/summary.go — 推定節約可能量を物理サイズで計算するように変更。論理サイズとの差を「スパース節約のまやかし」として注記
 - [ ] internal/formatter/templates/report.html — treemap / 巨大ファイル Top で「論理 / 物理」切替トグルを追加。デフォルトは論理（見た目の支配度を保つ）、物理に切り替えると実占有ベースの矩形サイズ / 並びになる
 - [ ] internal/formatter/json.go — Report / buildReport に physical_size 系フィールドを追加（既存 size は維持、差分モード互換確保）

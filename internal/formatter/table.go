@@ -94,15 +94,23 @@ func (t *Table) Render() string {
 	return b.String()
 }
 
+func FormatSizeWithPhysical(size, physicalSize int64) string {
+	if physicalSize > 0 && size > 0 && physicalSize < size*9/10 {
+		return fmt.Sprintf("%s (実 %s)", internal.FormatSize(size), internal.FormatSize(physicalSize))
+	}
+	return internal.FormatSize(size)
+}
+
 type DirEntry struct {
-	Path string
-	Size int64
+	Path         string
+	Size         int64
+	PhysicalSize int64
 }
 
 func PrintDirTable(w io.Writer, dirSizes map[string]analyzer.DirSizeInfo, limit int) {
 	entries := make([]DirEntry, 0, len(dirSizes))
 	for path, info := range dirSizes {
-		entries = append(entries, DirEntry{Path: path, Size: info.Size})
+		entries = append(entries, DirEntry{Path: path, Size: info.Size, PhysicalSize: info.PhysicalSize})
 	}
 
 	sort.Slice(entries, func(i, j int) bool {
@@ -124,21 +132,22 @@ func PrintDirTable(w io.Writer, dirSizes map[string]analyzer.DirSizeInfo, limit 
 	}
 	for _, e := range entries {
 		bar := RenderBar(int(e.Size), int(maxSize), barWidth)
-		tbl.Rows = append(tbl.Rows, Row{e.Path, internal.FormatSize(e.Size), bar})
+		tbl.Rows = append(tbl.Rows, Row{e.Path, FormatSizeWithPhysical(e.Size, e.PhysicalSize), bar})
 	}
 	fmt.Fprint(w, tbl.Render())
 }
 
 type ExtEntry struct {
-	Ext   string
-	Size  int64
-	Count int
+	Ext          string
+	Size         int64
+	PhysicalSize int64
+	Count        int
 }
 
 func PrintExtTable(w io.Writer, extStats map[string]analyzer.ExtStats, limit int) {
 	entries := make([]ExtEntry, 0, len(extStats))
 	for ext, s := range extStats {
-		entries = append(entries, ExtEntry{Ext: ext, Size: s.Size, Count: s.Count})
+		entries = append(entries, ExtEntry{Ext: ext, Size: s.Size, PhysicalSize: s.PhysicalSize, Count: s.Count})
 	}
 
 	sort.Slice(entries, func(i, j int) bool {
@@ -160,22 +169,23 @@ func PrintExtTable(w io.Writer, extStats map[string]analyzer.ExtStats, limit int
 	}
 	for _, e := range entries {
 		bar := RenderBar(int(e.Size), int(maxSize), barWidth)
-		tbl.Rows = append(tbl.Rows, Row{e.Ext, internal.FormatSize(e.Size), fmt.Sprintf("%d", e.Count), bar})
+		tbl.Rows = append(tbl.Rows, Row{e.Ext, FormatSizeWithPhysical(e.Size, e.PhysicalSize), fmt.Sprintf("%d", e.Count), bar})
 	}
 	fmt.Fprint(w, tbl.Render())
 }
 
 type CatEntry struct {
-	Category analyzer.Category
-	Size     int64
-	Count    int
-	Percent  float64
+	Category     analyzer.Category
+	Size         int64
+	PhysicalSize int64
+	Count        int
+	Percent      float64
 }
 
 func PrintCategoryTable(w io.Writer, catStats map[analyzer.Category]analyzer.CategoryStats) {
 	entries := make([]CatEntry, 0, len(catStats))
 	for cat, s := range catStats {
-		entries = append(entries, CatEntry{Category: cat, Size: s.Size, Count: s.Count, Percent: s.Percent})
+		entries = append(entries, CatEntry{Category: cat, Size: s.Size, PhysicalSize: s.PhysicalSize, Count: s.Count, Percent: s.Percent})
 	}
 
 	sort.Slice(entries, func(i, j int) bool {
@@ -195,7 +205,7 @@ func PrintCategoryTable(w io.Writer, catStats map[analyzer.Category]analyzer.Cat
 		bar := RenderBar(int(e.Size), int(maxSize), barWidth)
 		tbl.Rows = append(tbl.Rows, Row{
 			string(e.Category),
-			internal.FormatSize(e.Size),
+			FormatSizeWithPhysical(e.Size, e.PhysicalSize),
 			fmt.Sprintf("%d", e.Count),
 			fmt.Sprintf("%.1f%%", e.Percent),
 			bar,
@@ -280,7 +290,7 @@ func PrintTopFiles(w io.Writer, files []internal.FileInfo) {
 		RightAlign: []bool{false, true},
 	}
 	for _, f := range files {
-		tbl.Rows = append(tbl.Rows, Row{f.Path, internal.FormatSize(f.Size)})
+		tbl.Rows = append(tbl.Rows, Row{f.Path, FormatSizeWithPhysical(f.Size, f.PhysicalSize)})
 	}
 	fmt.Fprint(w, tbl.Render())
 }
