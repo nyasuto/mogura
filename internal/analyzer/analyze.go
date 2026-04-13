@@ -27,9 +27,10 @@ func Analyze(files []internal.FileInfo, opts AnalyzeOpts) Result {
 		opts.OlderThanDays = 365
 	}
 
-	var totalSize int64
+	var totalSize, totalPhysicalSize int64
 	for _, f := range files {
 		totalSize += f.Size
+		totalPhysicalSize += f.PhysicalSize
 	}
 
 	wasteDirs := DetectWaste(files)
@@ -39,16 +40,17 @@ func Analyze(files []internal.FileInfo, opts AnalyzeOpts) Result {
 	tree = Prune(tree, opts.Depth)
 
 	return Result{
-		TotalSize:     totalSize,
-		FileCount:     len(files),
-		ScannedAt:     opts.Now,
-		OlderThanDays: opts.OlderThanDays,
-		DirSizes:      AggregateByDir(files),
-		ExtStats:      AggregateByExt(files),
-		CategoryStats: AggregateByCategory(files),
-		TopFiles:      TopNFiles(files, opts.TopN),
-		DirTree:       tree,
-		WasteDirs:     wasteDirs,
-		StaleSummary:  DetectStale(files, opts.OlderThanDays, opts.Now),
+		TotalSize:         totalSize,
+		TotalPhysicalSize: totalPhysicalSize,
+		FileCount:         len(files),
+		ScannedAt:         opts.Now,
+		OlderThanDays:     opts.OlderThanDays,
+		DirSizes:          AggregateByDir(files),
+		ExtStats:          AggregateByExt(files),
+		CategoryStats:     AggregateByCategory(files),
+		TopFiles:          TopNFiles(files, opts.TopN),
+		DirTree:           tree,
+		WasteDirs:         wasteDirs,
+		StaleSummary:      DetectStale(files, opts.OlderThanDays, opts.Now),
 	}
 }

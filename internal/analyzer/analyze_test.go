@@ -11,10 +11,10 @@ func TestAnalyze(t *testing.T) {
 	oldTime := now.AddDate(-2, 0, 0)
 
 	files := []internal.FileInfo{
-		{Path: "/app/main.go", Dir: "/app", Ext: ".go", Size: 1000, ModTime: now},
-		{Path: "/app/util.go", Dir: "/app", Ext: ".go", Size: 500, ModTime: now},
-		{Path: "/app/img/photo.jpg", Dir: "/app/img", Ext: ".jpg", Size: 5000, ModTime: oldTime},
-		{Path: "/app/data/old.csv", Dir: "/app/data", Ext: ".csv", Size: 3000, ModTime: oldTime},
+		{Path: "/app/main.go", Dir: "/app", Ext: ".go", Size: 1000, PhysicalSize: 1000, ModTime: now},
+		{Path: "/app/util.go", Dir: "/app", Ext: ".go", Size: 500, PhysicalSize: 500, ModTime: now},
+		{Path: "/app/img/photo.jpg", Dir: "/app/img", Ext: ".jpg", Size: 5000, PhysicalSize: 4096, ModTime: oldTime},
+		{Path: "/app/data/old.csv", Dir: "/app/data", Ext: ".csv", Size: 3000, PhysicalSize: 3000, ModTime: oldTime},
 	}
 
 	opts := AnalyzeOpts{
@@ -29,6 +29,12 @@ func TestAnalyze(t *testing.T) {
 	t.Run("TotalSize", func(t *testing.T) {
 		if result.TotalSize != 9500 {
 			t.Errorf("TotalSize = %d, want 9500", result.TotalSize)
+		}
+	})
+
+	t.Run("TotalPhysicalSize", func(t *testing.T) {
+		if result.TotalPhysicalSize != 8596 {
+			t.Errorf("TotalPhysicalSize = %d, want 8596", result.TotalPhysicalSize)
 		}
 	})
 
