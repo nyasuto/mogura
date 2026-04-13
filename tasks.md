@@ -255,7 +255,7 @@
 
 ### 11-C: リリースワークフロー（タグ駆動）
 
-- [ ] `.github/workflows/release.yml` 作成。trigger は `push.tags: 'v*'`
+- [x] `.github/workflows/release.yml` 作成。trigger は `push.tags: 'v*'`
 - [ ] `goreleaser-action` を使って darwin/amd64, darwin/arm64, linux/amd64, linux/arm64 のバイナリをビルド・Release に添付
 - [ ] `.goreleaser.yml` を作成。CLAUDE.md の「外部依存ゼロ」方針は build 時の話なので goreleaser 自体は問題なし
 - [ ] （将来）Homebrew Tap 対応: goreleaser の `brews` セクションで自動 formula 生成（別リポジトリ `homebrew-mogura` が必要、今は延期）
