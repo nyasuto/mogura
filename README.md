@@ -115,6 +115,26 @@ mogura --size-mode physical ~
 mogura --html ~ > report.html
 ```
 
+### 並列スキャン
+
+mogura はディレクトリ走査を並列化する worker pool 方式を採用しており、SSD の並列 I/O 性能を活用して高速にスキャンする。デフォルトでは CPU コア数と同じ数の worker が起動する。
+
+```bash
+# worker 数を明示的に指定
+mogura --workers 4 ~
+
+# worker 数 1 で逐次スキャンと同等の動作
+mogura --workers 1 ~
+```
+
+`-workers` フラグ:
+
+| 値 | 動作 |
+|---|---|
+| `0`（デフォルト） | `runtime.NumCPU()` と同数の worker で並列スキャン |
+| `1` | 逐次スキャンと同等。デバッグ・比較用 |
+| `N` | N 個の worker で並列スキャン |
+
 `-size-mode` フラグ:
 
 | 値 | 動作 |

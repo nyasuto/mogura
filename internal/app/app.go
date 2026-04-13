@@ -44,6 +44,7 @@ type Config struct {
 	Quiet         bool
 	OneFileSystem bool
 	SizeMode      SizeMode
+	Workers       int
 }
 
 func ParseFlags(args []string) (Config, error) {
@@ -62,6 +63,7 @@ func ParseFlags(args []string) (Config, error) {
 	quiet := fs.Bool("quiet", false, "進捗表示を抑制")
 	oneFS := fs.Bool("x", false, "ファイルシステム境界を越えない")
 	sizeMode := fs.String("size-mode", "logical", "サイズ表示モード（logical / physical）")
+	workers := fs.Int("workers", 0, "並列 walk の worker 数（デフォルト: CPU コア数）")
 
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "usage: mogura [flags] <path>\n")
@@ -132,6 +134,7 @@ func ParseFlags(args []string) (Config, error) {
 		Quiet:         *quiet,
 		OneFileSystem: *oneFS,
 		SizeMode:      sm,
+		Workers:       *workers,
 	}, nil
 }
 
@@ -219,6 +222,7 @@ func Run(cfg Config, stdout io.Writer, stderr io.Writer) error {
 	scanOpts := scanner.ScanOpts{
 		Exclude:       cfg.Exclude,
 		OneFileSystem: cfg.OneFileSystem,
+		Workers:       cfg.Workers,
 	}
 
 	if !cfg.Quiet {
