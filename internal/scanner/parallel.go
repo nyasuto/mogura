@@ -25,9 +25,10 @@ type parallelScanner struct {
 	exactSet map[string]bool
 	globs    []string
 
-	taskCh   chan dirTask
-	resultCh chan internal.FileInfo
-	wg       sync.WaitGroup
+	pendingCh chan dirTask
+	taskCh    chan dirTask
+	resultCh  chan internal.FileInfo
+	wg        sync.WaitGroup
 }
 
 func resolveWorkers(n int) int {
@@ -51,17 +52,55 @@ func newParallelScanner(root string, opts ScanOpts) *parallelScanner {
 	workers := resolveWorkers(opts.Workers)
 
 	return &parallelScanner{
-		opts:     opts,
-		workers:  workers,
-		rootPath: root,
-		exactSet: exactSet,
-		globs:    globs,
-		taskCh:   make(chan dirTask, workers*4),
-		resultCh: make(chan internal.FileInfo, workers*64),
+		opts:      opts,
+		workers:   workers,
+		rootPath:  root,
+		exactSet:  exactSet,
+		globs:     globs,
+		pendingCh: make(chan dirTask, workers*4),
+		taskCh:    make(chan dirTask, workers),
+		resultCh:  make(chan internal.FileInfo, workers*64),
 	}
 }
 
+func (ps *parallelScanner) dispatcher() {
+	var queue []dirTask
+	pendingCh := ps.pendingCh
+
+	for {
+		if len(queue) == 0 {
+			task, ok := <-pendingCh
+			if !ok {
+				break
+			}
+			queue = append(queue, task)
+			continue
+		}
+
+		if pendingCh == nil {
+			ps.taskCh <- queue[0]
+			queue = queue[1:]
+			continue
+		}
+
+		select {
+		case task, ok := <-pendingCh:
+			if !ok {
+				pendingCh = nil
+			} else {
+				queue = append(queue, task)
+			}
+		case ps.taskCh <- queue[0]:
+			queue = queue[1:]
+		}
+	}
+
+	close(ps.taskCh)
+}
+
 func (ps *parallelScanner) start() {
+	go ps.dispatcher()
+
 	var workerWg sync.WaitGroup
 	for i := 0; i < ps.workers; i++ {
 		workerWg.Add(1)
@@ -76,7 +115,7 @@ func (ps *parallelScanner) start() {
 
 	go func() {
 		ps.wg.Wait()
-		close(ps.taskCh)
+		close(ps.pendingCh)
 		workerWg.Wait()
 		close(ps.resultCh)
 	}()
@@ -97,7 +136,7 @@ func (ps *parallelScanner) collect() []internal.FileInfo {
 
 func (ps *parallelScanner) enqueue(path string) {
 	ps.wg.Add(1)
-	ps.taskCh <- dirTask{path: path}
+	ps.pendingCh <- dirTask{path: path}
 }
 
 func (ps *parallelScanner) processDir(task dirTask) {
@@ -130,7 +169,7 @@ func (ps *parallelScanner) processDir(task dirTask) {
 				}
 			}
 			ps.wg.Add(1)
-			go func(p string) { ps.taskCh <- dirTask{path: p} }(path)
+			ps.pendingCh <- dirTask{path: path}
 			continue
 		}
 
