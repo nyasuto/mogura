@@ -259,6 +259,127 @@ func TestReadDirBulkEmptyDir(t *testing.T) {
 	}
 }
 
+func TestReadDirBulkSparseFile(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	sparsePath := filepath.Join(tmpDir, "sparse.bin")
+	f, err := os.Create(sparsePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const logicalSize = 10 * 1024 * 1024
+	if err := f.Truncate(logicalSize); err != nil {
+		f.Close()
+		t.Fatal(err)
+	}
+	f.Close()
+
+	info, err := os.Lstat(sparsePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lstatSize := info.Size()
+
+	entries, err := readDirBulk(tmpDir)
+	if err != nil {
+		t.Fatalf("readDirBulk error: %v", err)
+	}
+
+	var found bool
+	for _, e := range entries {
+		if e.Name == "sparse.bin" {
+			found = true
+			if e.Size != lstatSize {
+				t.Errorf("sparse.bin: bulk Size=%d, lstat Size=%d", e.Size, lstatSize)
+			}
+			if e.Size != logicalSize {
+				t.Errorf("sparse.bin: Size=%d, want logical %d", e.Size, logicalSize)
+			}
+			if e.PhysicalSize >= logicalSize {
+				t.Errorf("sparse.bin: PhysicalSize=%d should be less than logical %d", e.PhysicalSize, logicalSize)
+			}
+			break
+		}
+	}
+	if !found {
+		t.Fatal("sparse.bin not found in readDirBulk results")
+	}
+}
+
+func TestReadDirBulkAllTypesVsLstat(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	if err := os.WriteFile(filepath.Join(tmpDir, "regular.txt"), []byte("content"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(tmpDir, "mydir"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("regular.txt", filepath.Join(tmpDir, "mylink")); err != nil {
+		t.Fatal(err)
+	}
+	sparseF, err := os.Create(filepath.Join(tmpDir, "sparse.dat"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := sparseF.Truncate(5 * 1024 * 1024); err != nil {
+		sparseF.Close()
+		t.Fatal(err)
+	}
+	sparseF.Close()
+
+	entries, err := readDirBulk(tmpDir)
+	if err != nil {
+		t.Fatalf("readDirBulk error: %v", err)
+	}
+
+	bulkMap := make(map[string]bulkEntry)
+	for _, e := range entries {
+		bulkMap[e.Name] = e
+	}
+
+	expect := map[string]struct {
+		isDir     bool
+		isSymlink bool
+	}{
+		"regular.txt": {false, false},
+		"mydir":       {true, false},
+		"mylink":      {false, true},
+		"sparse.dat":  {false, false},
+	}
+
+	for name, want := range expect {
+		be, ok := bulkMap[name]
+		if !ok {
+			t.Errorf("readDirBulk missing %s", name)
+			continue
+		}
+		if be.IsDir != want.isDir {
+			t.Errorf("%s: IsDir=%v, want %v", name, be.IsDir, want.isDir)
+		}
+		if be.IsSymlink != want.isSymlink {
+			t.Errorf("%s: IsSymlink=%v, want %v", name, be.IsSymlink, want.isSymlink)
+		}
+
+		if want.isSymlink {
+			continue
+		}
+		info, err := os.Lstat(filepath.Join(tmpDir, name))
+		if err != nil {
+			t.Errorf("%s: Lstat error: %v", name, err)
+			continue
+		}
+		if !want.isDir && be.Size != info.Size() {
+			t.Errorf("%s: bulk Size=%d, lstat Size=%d", name, be.Size, info.Size())
+		}
+	}
+
+	sparse := bulkMap["sparse.dat"]
+	if sparse.PhysicalSize >= 5*1024*1024 {
+		t.Errorf("sparse.dat: PhysicalSize=%d should be less than logical size", sparse.PhysicalSize)
+	}
+}
+
 func TestReadDirBulkNonExistent(t *testing.T) {
 	_, err := readDirBulk("/nonexistent_path_for_testing_12345")
 	if err == nil {
