@@ -213,7 +213,7 @@
 - [x] internal/scanner/parallel.go — ディレクトリ 1 つを処理する workerFn: os.ReadDir で子を列挙 → ファイルは FileInfo に変換して結果 channel に送る / サブディレクトリはタスク channel に投入 / 除外・symlink スキップ・OneFileSystem・permission warning は既存 scanner.go と同じセマンティクスを保つ
 - [x] internal/scanner/parallel.go — 結果集約: 別 goroutine で結果 channel から FileInfo を受け取り []FileInfo にまとめる。OnProgress コールバックもこの集約側から叩く（現状と同じ挙動を維持）
 - [x] internal/scanner/parallel.go — タスクキューが空になり全 worker が idle になった時点で終了する仕組み（WaitGroup + close(taskCh) の順序に注意。deadlock しないこと）
-- [ ] internal/scanner/scanner.go — Scan 関数を並列実装に差し替え。既存の逐次実装は削除（Git 履歴に残る）
+- [x] internal/scanner/scanner.go — Scan 関数を並列実装に差し替え。既存の逐次実装は削除（Git 履歴に残る）
 - [ ] internal/scanner/parallel_test.go — 並列版でも既存 scanner_test.go のテスト（exclude、symlink、permission、OneFileSystem、PhysicalSize 等）が全てパスすること。map 順非依存の検証を追加
 - [ ] internal/scanner/parallel_test.go — 並列性テスト: 数千ファイルを含む一時ツリーを作り、Workers=1 と Workers=8 で同一結果になることを確認
 - [ ] bench_test.go（プロジェクトルート or scanner 配下）— 大規模ディレクトリ用のベンチマーク。`go test -bench` で逐次版 vs 並列版のスループットを測れるようにする。CI では走らせず手動実行でよい

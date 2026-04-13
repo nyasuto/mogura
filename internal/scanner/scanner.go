@@ -2,7 +2,6 @@ package scanner
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,16 +56,6 @@ func Scan(root string, opts ...ScanOpts) ([]internal.FileInfo, error) {
 		opt = opts[0]
 	}
 
-	exactSet := make(map[string]bool)
-	var globs []string
-	for _, e := range opt.Exclude {
-		if isGlobPattern(e) {
-			globs = append(globs, e)
-		} else {
-			exactSet[e] = true
-		}
-	}
-
 	var rootDev uint64
 	if opt.OneFileSystem {
 		rootDev, err = deviceID(root)
@@ -75,75 +64,11 @@ func Scan(root string, opts ...ScanOpts) ([]internal.FileInfo, error) {
 		}
 	}
 
-	var files []internal.FileInfo
-	scanned := 0
+	ps := newParallelScanner(root, opt)
+	ps.rootDev = rootDev
+	ps.start()
+	ps.enqueue(root)
 
-	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "warning: %s: %v\n", path, err)
-			return nil
-		}
-
-		if d.Type()&os.ModeSymlink != 0 {
-			return nil
-		}
-
-		if d.IsDir() {
-			if path != root && matchesExclude(d.Name(), exactSet, globs) {
-				return filepath.SkipDir
-			}
-			if opt.OneFileSystem && path != root {
-				dev, devErr := deviceID(path)
-				if devErr != nil {
-					fmt.Fprintf(os.Stderr, "warning: %s: %v\n", path, devErr)
-					return filepath.SkipDir
-				}
-				if dev != rootDev {
-					return filepath.SkipDir
-				}
-			}
-			return nil
-		}
-
-		if matchesExclude(d.Name(), exactSet, globs) {
-			return nil
-		}
-
-		info, err := d.Info()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "warning: %s: %v\n", path, err)
-			return nil
-		}
-
-		ext := strings.ToLower(filepath.Ext(path))
-
-		var physicalSize int64
-		if stat, ok := info.Sys().(*syscall.Stat_t); ok {
-			physicalSize = stat.Blocks * 512
-		} else {
-			physicalSize = info.Size()
-		}
-
-		files = append(files, internal.FileInfo{
-			Path:         path,
-			Size:         info.Size(),
-			PhysicalSize: physicalSize,
-			Dir:          filepath.Dir(path),
-			Ext:          ext,
-			ModTime:      info.ModTime(),
-		})
-		scanned++
-
-		if opt.OnProgress != nil {
-			opt.OnProgress(scanned, filepath.Dir(path))
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
+	files := ps.collect()
 	return files, nil
 }
