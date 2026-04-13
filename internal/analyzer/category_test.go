@@ -20,33 +20,44 @@ func TestAggregateByCategory(t *testing.T) {
 		{
 			name: "single category",
 			files: []internal.FileInfo{
-				{Path: "a.go", Size: 100, Ext: ".go"},
-				{Path: "b.py", Size: 200, Ext: ".py"},
+				{Path: "a.go", Size: 100, PhysicalSize: 100, Ext: ".go"},
+				{Path: "b.py", Size: 200, PhysicalSize: 180, Ext: ".py"},
 			},
 			want: map[Category]CategoryStats{
-				CategoryCode: {Size: 300, Count: 2, Percent: 100.0},
+				CategoryCode: {Size: 300, PhysicalSize: 280, Count: 2, Percent: 100.0},
 			},
 		},
 		{
 			name: "multiple categories",
 			files: []internal.FileInfo{
-				{Path: "a.go", Size: 300, Ext: ".go"},
-				{Path: "b.mp4", Size: 600, Ext: ".mp4"},
-				{Path: "c.unknown", Size: 100, Ext: ".unknown"},
+				{Path: "a.go", Size: 300, PhysicalSize: 300, Ext: ".go"},
+				{Path: "b.mp4", Size: 600, PhysicalSize: 600, Ext: ".mp4"},
+				{Path: "c.unknown", Size: 100, PhysicalSize: 100, Ext: ".unknown"},
 			},
 			want: map[Category]CategoryStats{
-				CategoryCode:  {Size: 300, Count: 1, Percent: 30.0},
-				CategoryVideo: {Size: 600, Count: 1, Percent: 60.0},
-				CategoryOther: {Size: 100, Count: 1, Percent: 10.0},
+				CategoryCode:  {Size: 300, PhysicalSize: 300, Count: 1, Percent: 30.0},
+				CategoryVideo: {Size: 600, PhysicalSize: 600, Count: 1, Percent: 60.0},
+				CategoryOther: {Size: 100, PhysicalSize: 100, Count: 1, Percent: 10.0},
 			},
 		},
 		{
 			name: "no extension maps to other",
 			files: []internal.FileInfo{
-				{Path: "Makefile", Size: 500, Ext: ""},
+				{Path: "Makefile", Size: 500, PhysicalSize: 500, Ext: ""},
 			},
 			want: map[Category]CategoryStats{
-				CategoryOther: {Size: 500, Count: 1, Percent: 100.0},
+				CategoryOther: {Size: 500, PhysicalSize: 500, Count: 1, Percent: 100.0},
+			},
+		},
+		{
+			name: "sparse files physical size",
+			files: []internal.FileInfo{
+				{Path: "a.raw", Size: 10000, PhysicalSize: 500, Ext: ".raw"},
+				{Path: "b.go", Size: 200, PhysicalSize: 200, Ext: ".go"},
+			},
+			want: map[Category]CategoryStats{
+				CategoryImage: {Size: 10000, PhysicalSize: 500, Count: 1, Percent: 98.04},
+				CategoryCode:  {Size: 200, PhysicalSize: 200, Count: 1, Percent: 1.96},
 			},
 		},
 	}
@@ -65,6 +76,9 @@ func TestAggregateByCategory(t *testing.T) {
 				}
 				if gotStats.Size != wantStats.Size {
 					t.Errorf("category %q: size = %d, want %d", cat, gotStats.Size, wantStats.Size)
+				}
+				if gotStats.PhysicalSize != wantStats.PhysicalSize {
+					t.Errorf("category %q: physical size = %d, want %d", cat, gotStats.PhysicalSize, wantStats.PhysicalSize)
 				}
 				if gotStats.Count != wantStats.Count {
 					t.Errorf("category %q: count = %d, want %d", cat, gotStats.Count, wantStats.Count)

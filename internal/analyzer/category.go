@@ -119,9 +119,10 @@ func ClassifyExt(ext string) Category {
 }
 
 type CategoryStats struct {
-	Size    int64   `json:"size"`
-	Count   int     `json:"count"`
-	Percent float64 `json:"percent"`
+	Size         int64   `json:"size"`
+	PhysicalSize int64   `json:"physical_size"`
+	Count        int     `json:"count"`
+	Percent      float64 `json:"percent"`
 }
 
 func AggregateByCategory(files []internal.FileInfo) map[Category]CategoryStats {
@@ -132,6 +133,7 @@ func AggregateByCategory(files []internal.FileInfo) map[Category]CategoryStats {
 		cat := ClassifyExt(f.Ext)
 		s := result[cat]
 		s.Size += f.Size
+		s.PhysicalSize += f.PhysicalSize
 		s.Count++
 		result[cat] = s
 	}
