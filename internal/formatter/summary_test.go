@@ -33,6 +33,7 @@ func TestRenderSummary(t *testing.T) {
 					TotalSize:  500 * 1024 * 1024,
 					TotalFiles: 42,
 				},
+				SavingsEstimate: 900 * 1024 * 1024,
 			},
 			contains: []string{
 				"総容量: 10.0 GB",

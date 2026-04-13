@@ -95,6 +95,13 @@ func TestAnalyze(t *testing.T) {
 			t.Errorf("StaleSummary.TotalSize = %d, want 8000", result.StaleSummary.TotalSize)
 		}
 	})
+
+	t.Run("SavingsEstimate", func(t *testing.T) {
+		// WasteDirs=0(no waste patterns), StaleSummary.TotalPhysicalSize=4096+3000=7096
+		if result.SavingsEstimate != 7096 {
+			t.Errorf("SavingsEstimate = %d, want 7096", result.SavingsEstimate)
+		}
+	})
 }
 
 func TestAnalyzeDefaults(t *testing.T) {
@@ -125,8 +132,8 @@ func TestAnalyzeEmpty(t *testing.T) {
 
 func TestAnalyzeWasteDirs(t *testing.T) {
 	files := []internal.FileInfo{
-		{Path: "/app/node_modules/pkg/index.js", Dir: "/app/node_modules/pkg", Ext: ".js", Size: 2000, ModTime: time.Now()},
-		{Path: "/app/src/main.go", Dir: "/app/src", Ext: ".go", Size: 500, ModTime: time.Now()},
+		{Path: "/app/node_modules/pkg/index.js", Dir: "/app/node_modules/pkg", Ext: ".js", Size: 2000, PhysicalSize: 1500, ModTime: time.Now()},
+		{Path: "/app/src/main.go", Dir: "/app/src", Ext: ".go", Size: 500, PhysicalSize: 500, ModTime: time.Now()},
 	}
 
 	result := Analyze(files, AnalyzeOpts{})
@@ -136,5 +143,8 @@ func TestAnalyzeWasteDirs(t *testing.T) {
 	}
 	if result.WasteDirs[0].Kind != "node_modules" {
 		t.Errorf("WasteDirs[0].Kind = %q, want %q", result.WasteDirs[0].Kind, "node_modules")
+	}
+	if result.SavingsEstimate != 1500 {
+		t.Errorf("SavingsEstimate = %d, want 1500 (physical size of waste)", result.SavingsEstimate)
 	}
 }

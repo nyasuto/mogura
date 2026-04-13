@@ -39,6 +39,13 @@ func Analyze(files []internal.FileInfo, opts AnalyzeOpts) Result {
 	tree := BuildTree(files)
 	tree = Prune(tree, opts.Depth)
 
+	staleSummary := DetectStale(files, opts.OlderThanDays, opts.Now)
+
+	var wastePhysical int64
+	for _, wd := range wasteDirs {
+		wastePhysical += wd.PhysicalSize
+	}
+
 	return Result{
 		TotalSize:         totalSize,
 		TotalPhysicalSize: totalPhysicalSize,
@@ -51,6 +58,7 @@ func Analyze(files []internal.FileInfo, opts AnalyzeOpts) Result {
 		TopFiles:          TopNFiles(files, opts.TopN),
 		DirTree:           tree,
 		WasteDirs:         wasteDirs,
-		StaleSummary:      DetectStale(files, opts.OlderThanDays, opts.Now),
+		StaleSummary:      staleSummary,
+		SavingsEstimate:   wastePhysical + staleSummary.TotalPhysicalSize,
 	}
 }

@@ -38,11 +38,6 @@ func RenderJSON(r Report) (string, error) {
 }
 
 func buildReport(result analyzer.Result) Report {
-	var wasteTotal int64
-	for _, wd := range result.WasteDirs {
-		wasteTotal += wd.Size
-	}
-
 	return Report{
 		TotalSize:    result.TotalSize,
 		ScannedAt:    result.ScannedAt,
@@ -56,7 +51,7 @@ func buildReport(result analyzer.Result) Report {
 			TotalFiles:    result.StaleSummary.TotalFiles,
 			DaysThreshold: result.OlderThanDays,
 		},
-		SavingsEstimate: wasteTotal + result.StaleSummary.TotalSize,
+		SavingsEstimate: result.SavingsEstimate,
 		DiffSummary:     result.DiffSummary,
 	}
 }

@@ -179,7 +179,7 @@
 - [x] internal/analyzer/topn.go — 巨大ファイル Top は論理サイズで並べたうえで物理サイズも保持（並び順は現行維持）
 - [x] internal/analyzer/tree.go — DirNode に PhysicalSize を追加し BuildTree / Prune で積み上げ + テスト
 - [x] internal/analyzer/stale.go / waste.go — StaleResult / WasteDir にも PhysicalSize を追加
-- [ ] internal/analyzer/analyze.go — Analyze 内で各集計を新フィールドで埋める。SavingsEstimate 相当は物理サイズベースで計算する
+- [x] internal/analyzer/analyze.go — Analyze 内で各集計を新フィールドで埋める。SavingsEstimate 相当は物理サイズベースで計算する
 
 ### 9-C: 表示への反映
 

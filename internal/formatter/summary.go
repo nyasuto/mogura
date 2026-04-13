@@ -10,10 +10,11 @@ import (
 )
 
 type SummaryInput struct {
-	TotalSize  int64
-	Categories map[analyzer.Category]analyzer.CategoryStats
-	WasteDirs  []analyzer.WasteDir
-	Stale      analyzer.StaleResult
+	TotalSize       int64
+	Categories      map[analyzer.Category]analyzer.CategoryStats
+	WasteDirs       []analyzer.WasteDir
+	Stale           analyzer.StaleResult
+	SavingsEstimate int64
 }
 
 func RenderSummary(input SummaryInput) string {
@@ -74,11 +75,5 @@ func renderStaleSummary(b *strings.Builder, stale analyzer.StaleResult) {
 }
 
 func renderSavings(b *strings.Builder, input SummaryInput) {
-	var wasteTotal int64
-	for _, w := range input.WasteDirs {
-		wasteTotal += w.Size
-	}
-	savings := wasteTotal + input.Stale.TotalSize
-
-	b.WriteString(fmt.Sprintf("\n推定節約可能量: %s\n", internal.FormatSize(savings)))
+	b.WriteString(fmt.Sprintf("\n推定節約可能量: %s\n", internal.FormatSize(input.SavingsEstimate)))
 }
