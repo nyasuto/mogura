@@ -1,9 +1,11 @@
 package scanner
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 
 	"mogura/internal"
@@ -354,6 +356,96 @@ func TestParallelDeterministicResults(t *testing.T) {
 		}
 		if files1[i].Ext != files8[i].Ext {
 			t.Errorf("index %d: ext mismatch %s vs %s", i, files1[i].Ext, files8[i].Ext)
+		}
+	}
+}
+
+func TestParallelConsistencyLargeTree(t *testing.T) {
+	base := t.TempDir()
+
+	dirs := []string{
+		"src/pkg1", "src/pkg2", "src/pkg3", "src/pkg4",
+		"vendor/lib1", "vendor/lib2", "vendor/lib3",
+		"data/raw", "data/processed", "data/cache",
+		"docs/api", "docs/guides",
+		"test/unit", "test/integration", "test/e2e",
+		"build/debug", "build/release",
+		"assets/img", "assets/css", "assets/js",
+		"config/dev", "config/prod",
+	}
+
+	tree := make(map[string]string, 3000)
+	exts := []string{".go", ".js", ".css", ".txt", ".json", ".yaml", ".md", ".log"}
+	idx := 0
+	for _, dir := range dirs {
+		for depth := 0; depth < 3; depth++ {
+			sub := dir
+			if depth > 0 {
+				sub = filepath.Join(dir, fmt.Sprintf("d%d", depth))
+			}
+			for i := 0; i < 50; i++ {
+				ext := exts[idx%len(exts)]
+				name := fmt.Sprintf("file_%04d%s", idx, ext)
+				content := fmt.Sprintf("content-%d-%s", idx, strings.Repeat("x", idx%200))
+				tree[filepath.Join(sub, name)] = content
+				idx++
+			}
+		}
+	}
+
+	createTree(t, base, tree)
+
+	files1, err := Scan(base, ScanOpts{Workers: 1})
+	if err != nil {
+		t.Fatalf("Workers=1: %v", err)
+	}
+	files8, err := Scan(base, ScanOpts{Workers: 8})
+	if err != nil {
+		t.Fatalf("Workers=8: %v", err)
+	}
+
+	if len(files1) != len(files8) {
+		t.Fatalf("file count mismatch: Workers=1 got %d, Workers=8 got %d", len(files1), len(files8))
+	}
+	if len(files1) != len(tree) {
+		t.Fatalf("expected %d files, Workers=1 got %d", len(tree), len(files1))
+	}
+
+	set1 := make(map[string]internal.FileInfo, len(files1))
+	for _, f := range files1 {
+		set1[f.Path] = f
+	}
+	set8 := make(map[string]internal.FileInfo, len(files8))
+	for _, f := range files8 {
+		set8[f.Path] = f
+	}
+
+	for path, f1 := range set1 {
+		f8, ok := set8[path]
+		if !ok {
+			t.Errorf("Workers=8 missing file: %s", path)
+			continue
+		}
+		if f1.Size != f8.Size {
+			t.Errorf("%s: size mismatch %d vs %d", path, f1.Size, f8.Size)
+		}
+		if f1.PhysicalSize != f8.PhysicalSize {
+			t.Errorf("%s: physical size mismatch %d vs %d", path, f1.PhysicalSize, f8.PhysicalSize)
+		}
+		if f1.Ext != f8.Ext {
+			t.Errorf("%s: ext mismatch %s vs %s", path, f1.Ext, f8.Ext)
+		}
+		if f1.Dir != f8.Dir {
+			t.Errorf("%s: dir mismatch %s vs %s", path, f1.Dir, f8.Dir)
+		}
+		if !f1.ModTime.Equal(f8.ModTime) {
+			t.Errorf("%s: modtime mismatch %v vs %v", path, f1.ModTime, f8.ModTime)
+		}
+	}
+
+	for path := range set8 {
+		if _, ok := set1[path]; !ok {
+			t.Errorf("Workers=1 missing file: %s", path)
 		}
 	}
 }
