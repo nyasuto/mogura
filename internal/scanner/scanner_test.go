@@ -307,6 +307,45 @@ func TestScanOnProgress(t *testing.T) {
 	}
 }
 
+func TestScanSparseFilePhysicalSize(t *testing.T) {
+	base := t.TempDir()
+
+	sparse := filepath.Join(base, "sparse.raw")
+	f, err := os.Create(sparse)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 論理サイズを 1GB に設定（実データは書き込まない → スパースファイル）
+	const logicalSize = 1 << 30
+	if err := f.Truncate(logicalSize); err != nil {
+		f.Close()
+		t.Fatal(err)
+	}
+	f.Close()
+
+	files, err := Scan(base)
+	if err != nil {
+		t.Fatalf("Scan() error: %v", err)
+	}
+
+	if len(files) != 1 {
+		t.Fatalf("expected 1 file, got %d", len(files))
+	}
+
+	fi := files[0]
+	if fi.Size != logicalSize {
+		t.Errorf("expected logical size %d, got %d", logicalSize, fi.Size)
+	}
+	if fi.PhysicalSize >= fi.Size {
+		t.Errorf("sparse file: expected PhysicalSize (%d) << Size (%d)", fi.PhysicalSize, fi.Size)
+	}
+	// スパースファイルの物理サイズはほぼ 0 のはず（ファイルシステムのメタデータ分のみ）
+	maxExpectedPhysical := int64(logicalSize / 10)
+	if fi.PhysicalSize > maxExpectedPhysical {
+		t.Errorf("sparse file: PhysicalSize %d unexpectedly large (> %d)", fi.PhysicalSize, maxExpectedPhysical)
+	}
+}
+
 func TestScanNonExistent(t *testing.T) {
 	_, err := Scan("/nonexistent/path/that/does/not/exist")
 	if err == nil {
