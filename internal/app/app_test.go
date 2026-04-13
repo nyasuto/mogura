@@ -210,6 +210,43 @@ func TestFilterFiles(t *testing.T) {
 	}
 }
 
+func TestParseHumanSize(t *testing.T) {
+	tests := []struct {
+		input   string
+		want    int64
+		wantErr bool
+	}{
+		{"100", 100, false},
+		{"10K", 10 * 1024, false},
+		{"10k", 10 * 1024, false},
+		{"5M", 5 * 1024 * 1024, false},
+		{"1G", 1024 * 1024 * 1024, false},
+		{"2T", 2 * 1024 * 1024 * 1024 * 1024, false},
+		{"1.5M", int64(1.5 * 1024 * 1024), false},
+		{"", 0, true},
+		{"abc", 0, true},
+		{"-5M", 0, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got, err := ParseHumanSize(tt.input)
+			if tt.wantErr {
+				if err == nil {
+					t.Error("expected error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("ParseHumanSize(%q) = %d, want %d", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestParseFlags(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -263,6 +300,24 @@ func TestParseFlags(t *testing.T) {
 			},
 		},
 		{
+			name: "min-size and ext flags",
+			args: []string{"--min-size", "10M", "--ext", "mp4,mkv", "/tmp"},
+			want: Config{
+				TargetPath:    "/tmp",
+				TopN:          20,
+				Depth:         3,
+				OutputFormat:  FormatText,
+				OlderThanDays: 365,
+				MinSize:       10 * 1024 * 1024,
+				FilterExt:     []string{"mp4", "mkv"},
+			},
+		},
+		{
+			name:    "invalid min-size",
+			args:    []string{"--min-size", "abc", "/tmp"},
+			wantErr: true,
+		},
+		{
 			name:    "no path",
 			args:    []string{},
 			wantErr: true,
@@ -295,6 +350,18 @@ func TestParseFlags(t *testing.T) {
 			}
 			if got.OlderThanDays != tt.want.OlderThanDays {
 				t.Errorf("OlderThanDays = %d, want %d", got.OlderThanDays, tt.want.OlderThanDays)
+			}
+			if got.MinSize != tt.want.MinSize {
+				t.Errorf("MinSize = %d, want %d", got.MinSize, tt.want.MinSize)
+			}
+			if len(got.FilterExt) != len(tt.want.FilterExt) {
+				t.Errorf("FilterExt len = %d, want %d", len(got.FilterExt), len(tt.want.FilterExt))
+			} else {
+				for i := range got.FilterExt {
+					if got.FilterExt[i] != tt.want.FilterExt[i] {
+						t.Errorf("FilterExt[%d] = %q, want %q", i, got.FilterExt[i], tt.want.FilterExt[i])
+					}
+				}
 			}
 			if len(got.Exclude) != len(tt.want.Exclude) {
 				t.Errorf("Exclude len = %d, want %d", len(got.Exclude), len(tt.want.Exclude))

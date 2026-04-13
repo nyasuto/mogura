@@ -46,6 +46,8 @@ func ParseFlags(args []string) (Config, error) {
 	olderThan := fs.Int("older-than", 365, "古いファイルの判定日数")
 	exclude := fs.String("exclude", "", "除外パターン（カンマ区切り: node_modules,.git,*.tmp）")
 	diffPath := fs.String("diff", "", "前回の JSON レポートファイルと差分比較")
+	minSizeStr := fs.String("min-size", "", "最小ファイルサイズ（例: 10M, 1G, 500K）")
+	filterExt := fs.String("ext", "", "対象拡張子（カンマ区切り: mp4,mkv,avi）")
 
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "usage: mogura [flags] <path>\n")
@@ -80,6 +82,24 @@ func ParseFlags(args []string) (Config, error) {
 		}
 	}
 
+	var minSize int64
+	if *minSizeStr != "" {
+		var err error
+		minSize, err = ParseHumanSize(*minSizeStr)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid -min-size value %q: %w", *minSizeStr, err)
+		}
+	}
+
+	var filterExts []string
+	if *filterExt != "" {
+		for _, e := range strings.Split(*filterExt, ",") {
+			if t := strings.TrimSpace(e); t != "" {
+				filterExts = append(filterExts, t)
+			}
+		}
+	}
+
 	return Config{
 		TargetPath:    fs.Arg(0),
 		TopN:          *top,
@@ -88,7 +108,51 @@ func ParseFlags(args []string) (Config, error) {
 		Exclude:       excludes,
 		OlderThanDays: *olderThan,
 		DiffPath:      *diffPath,
+		MinSize:       minSize,
+		FilterExt:     filterExts,
 	}, nil
+}
+
+func ParseHumanSize(s string) (int64, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0, fmt.Errorf("empty size string")
+	}
+
+	s = strings.ToUpper(s)
+	multiplier := int64(1)
+	suffix := s[len(s)-1]
+	switch suffix {
+	case 'K':
+		multiplier = 1024
+		s = s[:len(s)-1]
+	case 'M':
+		multiplier = 1024 * 1024
+		s = s[:len(s)-1]
+	case 'G':
+		multiplier = 1024 * 1024 * 1024
+		s = s[:len(s)-1]
+	case 'T':
+		multiplier = 1024 * 1024 * 1024 * 1024
+		s = s[:len(s)-1]
+	default:
+		if suffix < '0' || suffix > '9' {
+			return 0, fmt.Errorf("unknown size suffix %q", string(suffix))
+		}
+	}
+
+	s = strings.TrimRight(s, "bBiI")
+
+	var val float64
+	_, err := fmt.Sscanf(s, "%f", &val)
+	if err != nil {
+		return 0, fmt.Errorf("cannot parse number %q: %w", s, err)
+	}
+	if val < 0 {
+		return 0, fmt.Errorf("size must be non-negative")
+	}
+
+	return int64(val * float64(multiplier)), nil
 }
 
 func FilterFiles(files []internal.FileInfo, minSize int64, filterExt []string) []internal.FileInfo {
