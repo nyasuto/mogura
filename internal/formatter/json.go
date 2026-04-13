@@ -26,6 +26,7 @@ type Report struct {
 	WasteDirs       []analyzer.WasteDir                          `json:"waste_dirs,omitempty"`
 	StaleSummary    *StaleSummary                                `json:"stale_summary,omitempty"`
 	SavingsEstimate int64                                        `json:"savings_estimate,omitempty"`
+	DiffSummary     []analyzer.DirDiff                           `json:"diff_summary,omitempty"`
 }
 
 func RenderJSON(r Report) (string, error) {
@@ -56,6 +57,7 @@ func buildReport(result analyzer.Result) Report {
 			DaysThreshold: result.OlderThanDays,
 		},
 		SavingsEstimate: wasteTotal + result.StaleSummary.TotalSize,
+		DiffSummary:     result.DiffSummary,
 	}
 }
 

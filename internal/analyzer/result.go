@@ -17,4 +17,5 @@ type Result struct {
 	DirTree       DirNode                    `json:"dir_tree"`
 	WasteDirs     []WasteDir                 `json:"waste_dirs"`
 	StaleSummary  StaleResult                `json:"stale_summary"`
+	DiffSummary   []DirDiff                  `json:"diff_summary,omitempty"`
 }

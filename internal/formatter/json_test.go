@@ -1,6 +1,7 @@
 package formatter
 
 import (
+	"bytes"
 	"encoding/json"
 	"testing"
 	"time"
@@ -75,6 +76,21 @@ func TestRenderJSON(t *testing.T) {
 				SavingsEstimate: 1000000,
 			},
 		},
+		{
+			name: "report with diff summary",
+			report: Report{
+				TotalSize:    1024000,
+				ScannedAt:    fixedTime,
+				DirTree:      analyzer.DirNode{Name: "root", Size: 1024000},
+				Extensions:   map[string]analyzer.ExtStats{},
+				Categories:   map[analyzer.Category]analyzer.CategoryStats{},
+				LargestFiles: []internal.FileInfo{},
+				DiffSummary: []analyzer.DirDiff{
+					{Path: "/root/src", PrevSize: 100000, CurrSize: 200000, Delta: 100000},
+					{Path: "/root/docs", PrevSize: 50000, CurrSize: 30000, Delta: -20000},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -134,7 +150,58 @@ func TestRenderJSON(t *testing.T) {
 			if parsed.SavingsEstimate != tt.report.SavingsEstimate {
 				t.Errorf("SavingsEstimate = %d, want %d", parsed.SavingsEstimate, tt.report.SavingsEstimate)
 			}
+
+			if len(parsed.DiffSummary) != len(tt.report.DiffSummary) {
+				t.Errorf("DiffSummary count = %d, want %d", len(parsed.DiffSummary), len(tt.report.DiffSummary))
+			} else {
+				for i, d := range parsed.DiffSummary {
+					want := tt.report.DiffSummary[i]
+					if d.Path != want.Path || d.Delta != want.Delta {
+						t.Errorf("DiffSummary[%d] = {%s, %d}, want {%s, %d}", i, d.Path, d.Delta, want.Path, want.Delta)
+					}
+				}
+			}
 		})
+	}
+}
+
+func TestBuildReport_DiffSummary(t *testing.T) {
+	result := analyzer.Result{
+		TotalSize:     1000,
+		ScannedAt:     time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+		DirSizes:      map[string]int64{"/root": 1000},
+		ExtStats:      map[string]analyzer.ExtStats{},
+		CategoryStats: map[analyzer.Category]analyzer.CategoryStats{},
+		DiffSummary: []analyzer.DirDiff{
+			{Path: "/root/a", PrevSize: 100, CurrSize: 300, Delta: 200},
+		},
+	}
+
+	report := buildReport(result)
+	if len(report.DiffSummary) != 1 {
+		t.Fatalf("DiffSummary count = %d, want 1", len(report.DiffSummary))
+	}
+	if report.DiffSummary[0].Delta != 200 {
+		t.Errorf("DiffSummary[0].Delta = %d, want 200", report.DiffSummary[0].Delta)
+	}
+}
+
+func TestFormatJSON_DiffSummaryOmitted(t *testing.T) {
+	result := analyzer.Result{
+		TotalSize:     500,
+		ScannedAt:     time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+		DirSizes:      map[string]int64{"/root": 500},
+		ExtStats:      map[string]analyzer.ExtStats{},
+		CategoryStats: map[analyzer.Category]analyzer.CategoryStats{},
+	}
+
+	var buf bytes.Buffer
+	if err := FormatJSON(result, &buf); err != nil {
+		t.Fatalf("FormatJSON error: %v", err)
+	}
+
+	if bytes.Contains(buf.Bytes(), []byte("diff_summary")) {
+		t.Error("diff_summary should be omitted when empty")
 	}
 }
 
