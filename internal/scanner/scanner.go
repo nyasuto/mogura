@@ -67,8 +67,8 @@ func Scan(root string, opts ...ScanOpts) ([]internal.FileInfo, error) {
 
 	ps := newParallelScanner(root, opt)
 	ps.rootDev = rootDev
-	ps.start()
 	ps.enqueue(root)
+	ps.start()
 
 	files := ps.collect()
 	return files, nil
