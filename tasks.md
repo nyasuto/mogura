@@ -268,9 +268,9 @@
 
 ### 11-E: バッジと README 整備
 
-- [ ] README.md の冒頭に CI バッジ（`https://github.com/<user>/mogura/actions/workflows/ci.yml/badge.svg`）を追加
-- [ ] CONTRIBUTING.md（新規）に「PR 前に `make quality` を通すこと」「CI は ubuntu + macOS で回る」と明記
-- [ ] `make quality` と CI の内容が一致していることをドキュメントで保証
+- [x] README.md の冒頭に CI バッジ（`https://github.com/<user>/mogura/actions/workflows/ci.yml/badge.svg`）を追加
+- [x] CONTRIBUTING.md（新規）に「PR 前に `make quality` を通すこと」「CI は ubuntu + macOS で回る」と明記
+- [x] `make quality` と CI の内容が一致していることをドキュメントで保証
 
 
 ---

@@ -1,5 +1,7 @@
 # Mogura
 
+[![CI](https://github.com/nyasuto/mogura/actions/workflows/ci.yml/badge.svg)](https://github.com/nyasuto/mogura/actions/workflows/ci.yml)
+
 Mac のディスク使用量を詳細に分析する CLI ツール。
 
 macOS 標準のストレージ管理では「システム」「その他」としか分からない情報を、ディレクトリ別に分解して可視化する。
