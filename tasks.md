@@ -262,9 +262,9 @@
 ### 11-D: Dependabot
 
 - [x] `.github/dependabot.yml` 作成
-- [ ] `gomod` エコシステムを有効化（`directory: "/"`, `schedule.interval: weekly`）。現状は依存ゼロだが将来 `golang.org/x/sys` を入れる可能性があるので先に設定しておく
-- [ ] `github-actions` エコシステムを有効化（`actions/setup-go` 等のバージョン追従）。これは今日から効く
-- [ ] PR の自動マージまでは設定しない（人間レビュー必須）。ラベル `dependencies` だけ付与する設定
+- [x] `gomod` エコシステムを有効化（`directory: "/"`, `schedule.interval: weekly`）。現状は依存ゼロだが将来 `golang.org/x/sys` を入れる可能性があるので先に設定しておく
+- [x] `github-actions` エコシステムを有効化（`actions/setup-go` 等のバージョン追従）。これは今日から効く
+- [x] PR の自動マージまでは設定しない（人間レビュー必須）。ラベル `dependencies` だけ付与する設定
 
 ### 11-E: バッジと README 整備
 
